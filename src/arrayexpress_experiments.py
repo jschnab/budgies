@@ -76,7 +76,8 @@ def log_error(err_msg):
         log.write(err_msg)
 
 def get_experiments(search_url, headers, timeout):
-    """Return the json file containing experiments corresponding to a specific search."""
+    """Return the dictionary corresponding to the json file containing 
+experiments from a specific search."""
 
     # get response from ArrayExpress
     try:
