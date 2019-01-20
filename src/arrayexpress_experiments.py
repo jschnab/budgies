@@ -24,7 +24,7 @@ def print_help():
 
     -s, --search-suffix
     Suffix for the URL to search ArrayExpress.
-    & must be escaped with \
+    "&" must be escaped with "\\"
 
     -h, --help
     Display help."""
@@ -113,32 +113,48 @@ experiments from a specific search."""
         print(err_msg)
         log_error(err_msg)
 
-# get arguments from script call
-output_dir, search_suffix = get_args()
+if __name__ == '__main__':
+    # get arguments from script call
+    output_dir, search_suffix = get_args()
 
-# import headers for ArrayExpress API
-with open('headers.json', 'r') as infile:
-    headers = json.load(infile)
+    # import headers for ArrayExpress API
+    try:
+        with open('headers.json', 'r') as infile:
+            headers = json.load(infile)
+    except FileNotFoundError as e:
+        print('File "headers.json" not found but is neccessary for the API.\n\
+                Please create your own and place it in "budgies/src/".')
+        sys.exit()
     
-# create output directory if it does not exist
-if not os.path.exists(output_dir):
-    os.makedirs(output_dir)
-os.chdir(output_dir)
-print('\nWorking in {0}'.format(output_dir))
+    # create output directory if it does not exist
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
 
-# prefix url for searching experiments
-search_prefix = 'https://www.ebi.ac.uk/arrayexpress/json/v3/experiments?'
+    os.chdir(output_dir)
+    print('\nWorking in {0}'.format(output_dir))
 
-# search url
-search_url = search_prefix + search_suffix
+    # prefix url for searching experiments
+    search_prefix = 'https://www.ebi.ac.uk/arrayexpress/json/v3/experiments?'
 
-# download experiments list
-print('Downloading experiments from {0}'.format(search_url))
-experiments = get_experiments(search_url, headers, 20)
+    # search url
+    search_url = search_prefix + search_suffix
 
-# saving experiments as json file if download was successful
-if experiments is not None:
-    print('Saving data in "experiments.json"')
-    with open('experiments.json', 'w') as json_file:
-        json.dump(experiments, json_file)
+    # download experiments list
+    print('Downloading experiments from {0}'.format(search_url))
+    experiments = get_experiments(search_url, headers, 20)
+
+    # saving experiments as json file if download was successful
+    if experiments is not None:
+
+        # append date to file name
+        file_name = 'experiments-{0}.json'\
+                .format(datetime.today().strftime('%Y%m%d'))
+
+        print('Saving data in "{0}"'.format(file_name))
+
+        with open(file_name, 'w') as json_file:
+            json.dump(experiments, json_file)
+
+    else:
+        print('This search got no results')
 

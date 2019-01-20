@@ -33,7 +33,7 @@ def get_args():
     """Get arguments passed when the script is run at the command line."""
 
     try:
-        opts, args = getopt(sys.argv[1:],
+        opts, args = getopt.getopt(sys.argv[1:],
                 'd:h',
                 ['directory=', 'help'])
 
@@ -67,7 +67,7 @@ def log_error(err_msg, work_dir):
   
         with open('log_arrayexpress_files.txt', 'a') as log:
             log.write(str(datetime.now()) + ' ')
-            log.write(err_msg)
+            log.write(err_msg + '\n')
         
         # go back to previous directory
         os.chdir(curr_dir)
@@ -75,15 +75,20 @@ def log_error(err_msg, work_dir):
     else:
         with open('log_arrayexpress_files.txt', 'a') as log:
             log.write(str(datetime.now()) + ' ')
-            log.write(err_msg)
+            log.write(err_msg + '\n')
 
 def new_accessions():
     """Return a list of new accessions by comparing the last two experiments.json files."""
 
     # list of two most recent files names
-    last_files = sorted([f for f in os.listdir(os.getcwd()) if f.endswidth('.json')])[-2:]
+    last_files = sorted([f for f in os.listdir(os.getcwd()) if f.endswith('.json')])[-2:]
 
-    # return all accession if there is only one file
+    # check if there is any file to be processed
+    if last_files == []:
+        print('There is not experiments.json files to be processed')
+        sys.exit()
+
+    # return all accessions if there is only one file
     if len(last_files) == 1:
 
         # load json file
@@ -100,32 +105,35 @@ def new_accessions():
 
         return acc
     
+    # else there are more than two experiments.json files
+    # return the most recent accessions
     # two most recent files contents
-    last_exp = [0] * 2
-    for i in range(2):
-        with open(last_files[i], 'rb') as json_file:
-            last_exp[i] = json.load(json_file)
-
-    # list of experiments number for the two recent files
-    n_exp = [0] * 2
-    for i in range(2):
-        n_exp[i] = last_exp[i]['experiments']['total']
-
-    # if no new accessions, return empty list
-    if n_exp[0] = n_exp[1]:
-        return []
-
-    # else return list of new accession names
     else:
-        # number of new accessions
-        n_new = n_exp[1] - n_exp[0]
+        last_exp = [0] * 2
+        for i in range(2):
+            with open(last_files[i], 'r') as json_file:
+                last_exp[i] = json.load(json_file)
 
-        # initialize empty list to contain new accessions
-        new_acc = [''] *  n_new
-        for i in range(n_new):
-            new_acc[i] = last_exp[1]['experiments']['experiment'][i]['accession']
+        # list of experiments number for the two recent files
+        n_exp = [0] * 2
+        for i in range(2):
+            n_exp[i] = last_exp[i]['experiments']['total']
 
-        return new_acc
+        # if number accessions is the same in the two files, return empty list
+        if n_exp[0] == n_exp[1]:
+            return []
+
+        # else return list of new accession names
+        else:
+            # number of new accessions
+            n_new = n_exp[1] - n_exp[0]
+
+            # initialize empty list to contain new accessions
+            new_acc = [''] *  n_new
+            for i in range(n_new):
+                new_acc[i] = last_exp[1]['experiments']['experiment'][i]['accession']
+
+            return new_acc
 
 def download_file(file_url, headers, timeout):
     """Download a file containing experimental results."""
@@ -138,7 +146,7 @@ def download_file(file_url, headers, timeout):
 
                 # get file name as last part of the url
                 file_name = file_url.split('/')[-1]
-                with open(file_name) as outfile:
+                with open(file_name, 'w') as outfile:
                     outfile.write(response.text)
 
             else:
@@ -148,6 +156,24 @@ def download_file(file_url, headers, timeout):
                 print(err_msg)
                 log_error(err_msg, work_dir)
     
+        except requests.ConnectionError as e:
+            err_msg = 'Connection error when trying to get {0}\n{1}'\
+                    .format(file_url, str(e))
+            print(err_msg)
+            log_error(err_msg, work_dir)
+
+        except requests.Timeout as e:
+            err_msg = 'Timeout when trying to get {0}\n{1}'\
+                    .format(file_url, str(e))
+            print(err_msg)
+            log_error(err_msg, work_dir)
+
+        except requests.RequestException as e:
+            err_msg = 'General error when trying to get {0}\n{1}'\
+                    .format(file_url, str(e))
+            print(err_msg)
+            log_error(err_msg, work_dir)
+    
     # for a zip file
     elif file_url[-3] == 'zip':
         try:
@@ -156,70 +182,136 @@ def download_file(file_url, headers, timeout):
                 z = zipfile.ZipFile(io.BytesIO(response.content))
                 z.extractall()
 
+        except requests.ConnectionError as e:
+            err_msg = 'Connection error when trying to get {0}\n{1}'\
+                    .format(file_url, str(e))
+            print(err_msg)
+            log_error(err_msg, work_dir)
+
+        except requests.Timeout as e:
+            err_msg = 'Timeout when trying to get {0}\n{1}'\
+                    .format(file_url, str(e))
+            print(err_msg)
+            log_error(err_msg, work_dir)
+
+        except requests.RequestException as e:
+            err_msg = 'General error when trying to get {0}\n{1}'\
+                    .format(file_url, str(e))
+            print(err_msg)
+            log_error(err_msg, work_dir)
+
+
 def get_accession_files(url_prefix, accession, headers, timeout):
     """
     Download the json file containing the list of files for a specific accession \
 and return a list of URLs for files from a specific accession number.
     """
     # URL of json file for a specific accession
-    url = url_prefix + 'files/' + accession
+    url = url_prefix + accession
 
     # get json file
-    response = requests.get(url, headers=headers, timeout=timeout)
-    if response.ok:
+    try:
+        response = requests.get(url, headers=headers, timeout=timeout)
 
-        # save file
-        with open(file_name, 'wb') as outfile:
-            outfile.write(response.content)
+        # if request was successful
+        if response.ok:
 
-        # make dictionary out of json file
-        files_dict = json.loads(response.content)
+            # save file
+            file_name = '{0}.json'.format(acc)
+            with open(file_name, 'wb') as outfile:
+                outfile.write(response.content)
 
-        # get number of files
-        n_files = len(files_dict['files']['experiment']['file'])
+            # make dictionary out of json file
+            files_dict = json.loads(response.content)
 
-        # initialize empty list of files URL and
-        # loop over files to get URLs
-        files_url = [''] * n_files
-        for i in range(n_files):
-            files_url[i] = files_dict['files']['experiment']['file'][i]['url']
+            # get number of files
+            n_files = len(files_dict['files']['experiment']['file'])
 
-        return files_url
+            # initialize empty list of files URL and
+            # loop over files to get URLs
+            files_url = [''] * n_files
+            for i in range(n_files):
+                files_url[i] = files_dict['files']['experiment']['file'][i]['url']
 
-    # if request was unsuccessful
-    else:
-        err_msg = 'An error occured when trying to get {0}\n\
-                The response from the server was{1}'\
-                .format(file_url, response.status_code)
+            return files_url
+
+        # if request was unsuccessful
+        else:
+            err_msg = 'An error occured when trying to get {0}\n\
+                    The response from the server was{1}'\
+                    .format(url, response.status_code)
+            print(err_msg)
+            log_error(err_msg, work_dir)
+
+    except requests.ConnectionError as e:
+        err_msg = 'Connection error when trying to get {0}\n{1}'\
+                .format(url, str(e))
         print(err_msg)
         log_error(err_msg, work_dir)
 
-# get URL prefix for the API
-url_prefix = 'https://www.ebi.ac.uk/arrayexpress/json/v3/'
+    except requests.Timeout as e:
+        err_msg = 'Timeout when trying to get {0}\n{1}'\
+                .format(url, str(e))
+        print(err_msg)
+        log_error(err_msg, work_dir)
 
-# import headers for API query
-with open('headers.json', 'r') as infile:
-    headers = json.load(infile)
+    except requests.RequestException as e:
+        err_msg = 'General error when trying to get {0}\n{1}'\
+                .format(url, str(e))
+        print(err_msg)
+        log_error(err_msg, work_dir)
 
-# get arguments from script call
-work_dir = get_args()
 
-# get accessions that need to be processed
-accessions = new_accessions()
+if __name__ == '__main__':
+    # get URL prefix for the API
+    url_prefix = 'https://www.ebi.ac.uk/arrayexpress/json/v3/files/'
 
-# loop over each accession
-for acc in accessions:
+    # import headers for API query
+    with open('headers.json', 'r') as infile:
+        headers = json.load(infile)
 
-    # create a directory for each accession
-    os.makedirs(acc)
-    os.chdir(acc)
+    # get arguments from script call
+    work_dir = get_args()
+
+    # go to working directory
+    os.chdir(work_dir)
+
+    # get accessions that need to be processed
+    print('Getting list of experiment accessions to process...')
+    accessions = new_accessions()
+    print('{0} new accessions to process.'.format(len(accessions)))
+
+    # loop over each accession
+    for acc in accessions:
+
+        print('Processing accession {0}'.format(acc))
+
+        # create a directory for each accession
+        try:
+            os.makedirs(acc)
+            os.chdir(acc)
+
+        # if the directory already exists, delete its contents
+        except FileExistsError:
+            print('The directory "{0}" already exists.'.format(acc))
+            os.chdir(acc)
+            path = os.getcwd()
+            for f in os.listdir(path):
+                file_path = os.path.join(path, f)
+                os.remove(file_path)
+            print('Removed directory "{0}" and its contents.'.format(acc))
     
-    # get list of files (containing experimental results) to downloads
-    files_url = get_accession_files(url_prefix, acc, headers, 20)
+        # get list of files (containing experimental results) to downloads
+        files_url = get_accession_files(url_prefix, acc, headers, 20)
 
-    # download each file
-    for url in files_url:
-        download_file(url, headers, 20)
+        # download each file
+        print('Downloading files...')
+        for url in files_url:
+            download_file(url, headers, 20)
 
-    # go back to working directory
-    os.chdir('..')
+        # go back to working directory
+        os.chdir('..')
+
+        print('Processed accession {0}.'.format(acc))
+
+    print('Finished downloading new accession files')
