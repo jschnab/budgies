@@ -10,19 +10,24 @@ import os
 from datetime import datetime
 import zipfile
 import io
+from subprocess import run
 
 def print_help():
     """Print help."""
 
     help_text = \
-"""Download files corresponding to a list of experiments from ArrayExpress.
+"""Download files corresponding to a list of experiments from ArrayExpress\
+then copy them to an AWS S3 bucket.
 
     python3 arrayexpress_files.py -d[working directory] -h
 
-    Please provide an option for the working directory.
+    Please provide an option for the working directory and the S3 bucket.
 
     -d, --directory
     Full path to the working directory.
+
+    -b, --bucket
+    Name of the AWS S3 bucket.
 
     -h, --help
     Display help."""
@@ -34,8 +39,8 @@ def get_args():
 
     try:
         opts, args = getopt.getopt(sys.argv[1:],
-                'd:h',
-                ['directory=', 'help'])
+                'd:b:h',
+                ['directory=', 'bucket=', 'help'])
 
     except getopt.GetoptError as e:
         print(e)
@@ -46,6 +51,7 @@ def get_args():
         Please make sure you did not forget to include an option name.""")
 
     work_dir = None
+    bucket = None
 
     for opt, arg in opts:
         if opt in ('-h', '--help'):
@@ -53,8 +59,10 @@ def get_args():
             sys.exit()
         elif opt in ('-d', '--directory'):
             work_dir = arg
+        elif opt in ('-b', '--bucket'):
+            bucket = arg
 
-    return work_dir
+    return work_dir, bucket
 
 def log_error(err_msg, work_dir):
     """Log error in a text file."""
@@ -175,7 +183,7 @@ def download_file(file_url, headers, timeout):
             log_error(err_msg, work_dir)
     
     # for a zip file
-    elif file_url[-3] == 'zip':
+    elif file_url[-3:] == 'zip':
         try:
             response = requests.get(file_url, headers=headers, timeout=timeout, stream=True)
             if response.ok:
@@ -271,7 +279,8 @@ if __name__ == '__main__':
         headers = json.load(infile)
 
     # get arguments from script call
-    work_dir = get_args()
+    work_dir, bucket_suffix = get_args()
+    bucket = 's3://' + bucket_suffix
 
     # go to working directory
     os.chdir(work_dir)
@@ -311,6 +320,16 @@ if __name__ == '__main__':
 
         # go back to working directory
         os.chdir('..')
+
+        # copy directory to S3 bucket by calling a bash command
+        process = run(['aws', 's3', 'cp', s3_bucket])
+
+        # delete the directory if copy to S3 bucket copy was successful
+        if process.returncode == 0:
+            # loop through each file name in the directory and delete them
+            for f in os.listdir(acc):
+                os.remove(os.path.join(acc, f))
+            os.rmdir(acc)
 
         print('Processed accession {0}.'.format(acc))
 
