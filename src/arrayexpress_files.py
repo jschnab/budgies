@@ -85,6 +85,23 @@ def log_error(err_msg, work_dir):
             log.write(str(datetime.now()) + ' ')
             log.write(err_msg + '\n')
 
+def all_accessions(file_name):
+    """Return a list of all experiments accession from an experiment.json file."""
+
+    # load json file
+    with open(file_name, 'r') as json_file:
+        exp = json.load(json_file)
+
+    # number of experiments
+    n_exp = exp['experiments']['total']
+
+    # return a list of accession names
+    acc = [''] * n_exp
+    for i in range(n_exp):
+        acc[i] = exp['experiments']['experiment'][i]['accession']
+
+    return acc
+
 def new_accessions():
     """Return a list of new accessions by comparing the last two experiments.json files."""
 

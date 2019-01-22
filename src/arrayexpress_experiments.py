@@ -8,6 +8,7 @@ import getopt
 import sys
 import os
 from datetime import datetime
+import time
 
 def print_help():
     """Print help."""
@@ -141,16 +142,23 @@ if __name__ == '__main__':
 
     # download experiments list
     print('Downloading experiments from {0}'.format(search_url))
-    experiments = get_experiments(search_url, headers, 300)
+    start = time.perf_counter()
+    experiments = get_experiments(search_url, headers, 900)
+    stop = time.perf_counter()
+    elapsed = (stop - start) / 60
+    print('Downloading time : {0:.2f}'.format(elapsed))
 
     # saving experiments as json file if download was successful
     if experiments is not None:
 
         # append date to file name
-        file_name = 'experiments-{0}.json'\
-                .format(datetime.today().strftime('%Y%m%d'))
+        file_name = 'experiments-{0}.json'.format(search_url[-5:-1])
+        #        .format(datetime.today().strftime('%Y%m%d'))
 
         print('Saving data in "{0}"'.format(file_name))
-
+        start = time.perf_counter() 
         with open(file_name, 'w') as json_file:
             json.dump(experiments, json_file)
+        stop = time.perf_counter()
+        elapsed = (stop - start)
+        print('Saving file time : {0:.2f}'.format(elapsed))
