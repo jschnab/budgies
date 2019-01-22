@@ -11,6 +11,7 @@ from datetime import datetime
 import zipfile
 import io
 from subprocess import run
+import time
 
 def print_help():
     """Print help."""
@@ -250,13 +251,20 @@ and return a list of URLs for files from a specific accession number.
             files_dict = json.loads(response.content)
 
             # get number of files
-            n_files = len(files_dict['files']['experiment']['file'])
+            try:
+                n_files = len(files_dict['files']['experiment']['file'])
 
-            # initialize empty list of files URL and
-            # loop over files to get URLs
-            files_url = [''] * n_files
-            for i in range(n_files):
-                files_url[i] = files_dict['files']['experiment']['file'][i]['url']
+                # initialize empty list of files URL and
+                # loop over files to get URLs
+                files_url = [''] * n_files
+                for i in range(n_files):
+                    files_url[i] = files_dict['files']['experiment']['file'][i]['url']
+
+            except TypeError as e:
+                err_msg = 'Error when trying to parse the file downloaded from {0}.\n{1}'\
+                        .format(url, e)
+                print(err_msg)
+                log_error(err_msg)
 
             return files_url
 
@@ -302,52 +310,58 @@ if __name__ == '__main__':
     # go to working directory
     os.chdir(work_dir)
 
-    # get accessions that need to be processed
-    print('Getting list of experiment accessions to process...')
-    accessions = new_accessions()
-    print('{0} new accessions to process.'.format(len(accessions)))
+    # loop through experiments.json files for each year to get accessions
+    start = time.perf_counter()
 
-    # loop over each accession
-    for acc in accessions:
+    for year in range(2006, 2007):
+        exp_file = 'experiments-{0}.json'.format(year)
+        print('\nGetting list of experiments from {0}.'.format(exp_file))
+        accessions = all_accessions(exp_file)
+        print('{0} accessions to process'.format(len(accessions)))
 
-        print('Processing accession {0}'.format(acc))
+        # loop over each accession
+        for acc in accessions:
+            print('Processing accession {0}'.format(acc))
 
-        # create a directory for each accession
-        try:
-            os.makedirs(acc)
-            os.chdir(acc)
+            # create a directory for each accession
+            try:
+                os.makedirs(acc)
+                os.chdir(acc)
 
-        # if the directory already exists, delete its contents
-        except FileExistsError:
-            print('The directory "{0}" already exists.'.format(acc))
-            os.chdir(acc)
-            path = os.getcwd()
-            for f in os.listdir(path):
-                file_path = os.path.join(path, f)
-                os.remove(file_path)
-            print('Removed directory "{0}" and its contents.'.format(acc))
+            # if the directory already exists, delete its contents
+            except FileExistsError:
+                print('The directory "{0}" already exists.'.format(acc))
+                os.chdir(acc)
+                path = os.getcwd()
+                for f in os.listdir(path):
+                    file_path = os.path.join(path, f)
+                    os.remove(file_path)
+                print('Removed directory "{0}" and its contents.'.format(acc))
     
-        # get list of files (containing experimental results) to downloads
-        files_url = get_accession_files(url_prefix, acc, headers, 300)
+            # get list of files (containing experimental results) to downloads
+            files_url = get_accession_files(url_prefix, acc, headers, 300)
 
-        # download each file
-        print('Downloading files...')
-        for url in files_url:
-            download_file(url, headers, 300)
+            # download each file
+            print('Downloading files from ArrayExpress.')
+            for url in files_url:
+                download_file(url, headers, 900)
 
-        # go back to working directory
-        os.chdir('..')
+            # go back to working directory
+            os.chdir('..')
 
-        # copy directory to S3 bucket by calling a bash command
-        process = run(['aws', 's3', 'cp', s3_bucket])
+            # copy directory to S3 bucket by calling a bash command
+            print('Copying data to S3.')
+            bucket_dir = bucket + '/' + acc
+            process = run(['aws', 's3', 'cp', acc, bucket_dir, '--quiet', '--recursive'])
 
-        # delete the directory if copy to S3 bucket copy was successful
-        if process.returncode == 0:
-            # loop through each file name in the directory and delete them
-            for f in os.listdir(acc):
-                os.remove(os.path.join(acc, f))
-            os.rmdir(acc)
+            # delete the directory if copy to S3 bucket copy was successful
+            if process.returncode == 0:
+                # loop through each file name in the directory and delete them
+                for f in os.listdir(acc):
+                    os.remove(os.path.join(acc, f))
+                os.rmdir(acc)
 
-        print('Processed accession {0}.'.format(acc))
+    stop = time.perf_counter()
+    elapsed = (stop - start) / 3600
 
-    print('Finished downloading new accession files')
+    print('Downloading files for all accessions took {0:.2f} hours.'.format(elapsed))

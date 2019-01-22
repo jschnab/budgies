@@ -1,6 +1,6 @@
 #!bin/bash
 
-# script which downloads data from ArrayExpress year by year
+# script which downloads experiments.json files from ArrayExpress year by year
 # since downloading all years results in timeout
 
 YEAR=2019

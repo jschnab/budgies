@@ -146,7 +146,7 @@ if __name__ == '__main__':
     experiments = get_experiments(search_url, headers, 900)
     stop = time.perf_counter()
     elapsed = (stop - start) / 60
-    print('Downloading time : {0:.2f}'.format(elapsed))
+    print('Downloading time : {0:.2f} minutes.'.format(elapsed))
 
     # saving experiments as json file if download was successful
     if experiments is not None:
@@ -161,4 +161,4 @@ if __name__ == '__main__':
             json.dump(experiments, json_file)
         stop = time.perf_counter()
         elapsed = (stop - start)
-        print('Saving file time : {0:.2f}'.format(elapsed))
+        print('Saving file time : {0:.2f} seconds.'.format(elapsed))
