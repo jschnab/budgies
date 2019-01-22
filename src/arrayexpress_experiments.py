@@ -73,7 +73,7 @@ def log_error(err_msg):
     """Log error in a text file."""
     with open('log_arrayexpress_exp.txt', 'a') as log:
         log.write(str(datetime.now()) + ' ')
-        log.write(err_msg)
+        log.write(err_msg + '\n')
 
 def get_experiments(search_url, headers, timeout):
     """Return the dictionary corresponding to the json file containing 
@@ -141,7 +141,7 @@ if __name__ == '__main__':
 
     # download experiments list
     print('Downloading experiments from {0}'.format(search_url))
-    experiments = get_experiments(search_url, headers, 20)
+    experiments = get_experiments(search_url, headers, 300)
 
     # saving experiments as json file if download was successful
     if experiments is not None:
@@ -154,7 +154,3 @@ if __name__ == '__main__':
 
         with open(file_name, 'w') as json_file:
             json.dump(experiments, json_file)
-
-    else:
-        print('This search got no results')
-

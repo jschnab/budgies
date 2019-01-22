@@ -311,12 +311,12 @@ if __name__ == '__main__':
             print('Removed directory "{0}" and its contents.'.format(acc))
     
         # get list of files (containing experimental results) to downloads
-        files_url = get_accession_files(url_prefix, acc, headers, 20)
+        files_url = get_accession_files(url_prefix, acc, headers, 300)
 
         # download each file
         print('Downloading files...')
         for url in files_url:
-            download_file(url, headers, 20)
+            download_file(url, headers, 300)
 
         # go back to working directory
         os.chdir('..')
