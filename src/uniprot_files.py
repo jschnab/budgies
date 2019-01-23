@@ -14,7 +14,7 @@ def print_help():
     """Print help."""
 
     help_text = \
-"""Download files corresponding to Uniprot Entry IDs retrieved from a Uniprot search
+"""Download files corresponding to Uniprot Entry IDs retrieved from a Uniprot search \
 and transfer them to an AWS S3 bucket.
 
     python3 uniprot_files.py -d[working directory] -s[search suffix] -b[bucket name] -h
@@ -47,38 +47,38 @@ def get_args():
         print(e)
         sys.exit(2)
 
-    if len(args > 0):
+    if len(args) > 0:
         print("""This script does not take arguments outside options.
 Please make sure you did not forget to include an option name.""")
 
-        directory = None
-        search = None
-        bucket = None
+    directory = None
+    search = None
+    bucket = None
 
-        for opt, arg in opts:
-            if opt in ('-h', '--help'):
-                print_help()
-                sys.exit()
-            elif opt in ('-d', '--directory'):
-                directory = arg
-            elif opt in ('-s', '--search'):
-                search = arg
-            elif opt in ('-b', '--bucket'):
-                bucket = arg
-
-        if directory == None:
-            print('Please provide a directory path.')
+    for opt, arg in opts:
+        if opt in ('-h', '--help'):
+            print_help()
             sys.exit()
+        elif opt in ('-d', '--directory'):
+            directory = arg
+        elif opt in ('-s', '--search'):
+            search = arg
+        elif opt in ('-b', '--bucket'):
+            bucket = arg
 
-        if search == None:
-            print('Please provide a search suffix.')
-            sys.exit()
+    if directory == None:
+        print('Please provide a directory path.')
+        sys.exit()
 
-        if bucket == None:
-            print('Please provide an AWS S3 bucket.')
-            sys.exit()
+    if search == None:
+        print('Please provide a search suffix.')
+        sys.exit()
 
-        return directory, search, bucket
+    if bucket == None:
+        print('Please provide an AWS S3 bucket.')
+        sys.exit()
+
+    return directory, search, bucket
 
 def log_error(err_msg):
     """Log error in a text file."""
@@ -93,6 +93,7 @@ return list of entries from the text file."""
     # build full URL by joining search prefix and suffix
     search_prefix = 'https://www.uniprot.org/uniprot/?query='
     url = search_prefix + search_suffix
+    print(url)
     
     # get response from Uniprot
     try:
@@ -102,20 +103,21 @@ return list of entries from the text file."""
 
             # save search as text file
             today = datetime.today().strftime('%Y%m%d')
-            file_name = 'uniprot_entries-'  + today
+            file_name = 'uniprot_entries-{0}.txt'.format(today)
             with open(file_name, 'w') as outfile:
                 outfile.write(response.text)
 
-            search_results = response.text.split('\t')
+            search_results = response.text.split('\n')
             
             # generate list of Uniprot entries
-            # first line is column names, last line is empty
-            uniprot_entries = [''] * (len(search_results) - 2)
-            for i in range(1, len(search_results) - 2):
+            # last line is empty
+            uniprot_entries = [''] * (len(search_results) - 1)
+            for i in range(len(search_results) - 1):
                 # first column contains uniprot entries
-                uniprot_entries[i] = search_results[i].split('\n')[0]
+                uniprot_entries[i] = search_results[i].split('\t')[0]
 
-            return uniprot_entries
+            # discard first element (column name)
+            return uniprot_entries[1:]
 
         else:
             err_msg = 'Error when trying to get {0}\n\
@@ -141,7 +143,7 @@ The status code from the server was {1}.'.format(url, response.status_code)
         print(err_msg)
         log_error(err_msg)
 
-def download_entries(entry, headers):
+def download_entry(entry, headers):
     """Download the text file corresponding to a Uniprot entry."""
     
     # build full URL by joining search prefix and suffix
@@ -184,17 +186,19 @@ The status code from the server was {1}.'.format(url, response.status_code)
         print(err_msg)
         log_error(err_msg)
 
-def copy_to_S3(entry_file, bucket):
+def copy_to_s3(entry_file, bucket):
     """Copy the text file corresponding to a Uniprot entry to and AWS S3 bucket."""
 
+    # destination file
+    dest_file = bucket + '/' + entry_file
+
     # copy entry file to S3
-    process = run(['aws', 's3', 'cp', entry_file, bucket])
+    process = run(['aws', 's3', 'cp', entry_file, dest_file])
         
     # check if copy to AWS S3 was successful
     if process.returncode  == 0:
         # delete the entry file
         os.remove(file_name)
-        print('Copied {0} to {1}'.format(file_name, bucket))
 
     else:
         print('Could not copy {0} to {1}'.format(file_name, bucket))
@@ -207,20 +211,30 @@ if __name__ == '__main__':
 
     # get arguments from command call
     work_dir, search_suffix, bucket_suffix = get_args()
-    bucket = 's3://' + bucket_suffix
+    bucket = 's3://budgies/' + bucket_suffix
+
+    # check if working directory exists
+    # and make it if it does not exist
+    if not os.path.exists(work_dir):
+        os.makedirs(work_dir)
 
     # go to the working directory
     os.chdir(work_dir)
+    print('Working in {0}'.format(work_dir))
 
     # get list of Uniprot entries
     # and save as text file
     uniprot_entries = search_uniprot(search_suffix, headers)
 
-    # loop over each individual entry
-    for entry in uniprot_entries:
+    # process entries if search was successful
+    if uniprot_entries is not None:
+        print('Retrieved {0} entries.'.format(len(uniprot_entries)))
+        # loop over each individual entry
+        print('Downloading files for each Uniprot entry...')
+        for entry in uniprot_entries:
 
-        # download text file for each Uniprot entry
-        file_name = download_entry(entry, headers)
+            # download text file for each Uniprot entry
+            file_name = download_entry(entry, headers)
 
-        # copy file to AWS S3
-        copy_to_s3(file_name, bucket)
+            # copy file to AWS S3
+            copy_to_s3(file_name, bucket)
