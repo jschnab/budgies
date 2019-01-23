@@ -346,7 +346,8 @@ if __name__ == '__main__':
         os.chdir('..')
 
         # copy directory to S3 bucket by calling a bash command
-        process = run(['aws', 's3', 'cp', bucket, '--recursive'])
+        bucket_dir = bucket + '/' + acc
+        process = run(['aws', 's3', 'cp', acc, bucket_dir, '--recursive'])
 
         # delete the directory if copy to S3 bucket copy was successful
         if process.returncode == 0:
