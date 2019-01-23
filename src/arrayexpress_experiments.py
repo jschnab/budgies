@@ -46,7 +46,7 @@ def get_args():
 
     if len(args) > 0:
         print("""This script does not take arguments outside options.
-        Please make sure you did not forget to include an option name.""")
+Please make sure you did not forget to include an option name.""")
 
     output_dir = None
     search_suffix = None
@@ -91,7 +91,7 @@ experiments from a specific search."""
         # if request not successful display and log error
         else:
             err_msg = 'An error occurred when trying to get {0}\n\
-                    The response from the server was {1}'\
+ The response from the server was {1}'\
                     .format(search_url, response.status_code)
             print(err_msg)
             log_error(err_msg)
@@ -124,7 +124,7 @@ if __name__ == '__main__':
             headers = json.load(infile)
     except FileNotFoundError as e:
         print('File "headers.json" not found but is neccessary for the API.\n\
-                Please create your own and place it in "budgies/src/".')
+Please create your own and place it in "budgies/src/".')
         sys.exit()
     
     # create output directory if it does not exist
