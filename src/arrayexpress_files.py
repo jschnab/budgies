@@ -176,7 +176,7 @@ def download_file(file_url, headers, timeout):
 
             else:
                 err_msg = 'An error occured when trying to get {0}\n\
-                        The response from the server was{1}'\
+The response from the server was {1}'\
                         .format(file_url, response.status_code)
                 print(err_msg)
                 log_error(err_msg, work_dir)
@@ -204,8 +204,15 @@ def download_file(file_url, headers, timeout):
         try:
             response = requests.get(file_url, headers=headers, timeout=timeout, stream=True)
             if response.ok:
-                z = zipfile.ZipFile(io.BytesIO(response.content))
-                z.extractall()
+                try:
+                    z = zipfile.ZipFile(io.BytesIO(response.content))
+                    z.extractall()
+                except zipfile.BadZipfile as e:
+                    file_name = file_url.split('/')[-1]
+                    err_msg = 'Error when trying to unzip {0}\n{1}'\
+                            .format(err_msg, e)
+                    print(err_msg)
+                    log_error(err_msg, work_dir)
 
         except requests.ConnectionError as e:
             err_msg = 'Connection error when trying to get {0}\n{1}'\
@@ -263,7 +270,7 @@ and return a list of URLs for files from a specific accession number.
         # if request was unsuccessful
         else:
             err_msg = 'An error occured when trying to get {0}\n\
-                    The response from the server was{1}'\
+The response from the server was {1}'\
                     .format(url, response.status_code)
             print(err_msg)
             log_error(err_msg, work_dir)
@@ -339,7 +346,7 @@ if __name__ == '__main__':
         os.chdir('..')
 
         # copy directory to S3 bucket by calling a bash command
-        process = run(['aws', 's3', 'cp', s3_bucket])
+        process = run(['aws', 's3', 'cp', bucket, '--recursive'])
 
         # delete the directory if copy to S3 bucket copy was successful
         if process.returncode == 0:
