@@ -47,7 +47,7 @@ def get_args():
         print(e)
         sys.exit(2)
 
-    if len(args > 0):
+    if len(args) > 0:
         print("""This script does not take arguments outside options.
 Please make sure you did not forget to include an option name.""")
 
