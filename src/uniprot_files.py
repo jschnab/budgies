@@ -93,7 +93,6 @@ return list of entries from the text file."""
     # build full URL by joining search prefix and suffix
     search_prefix = 'https://www.uniprot.org/uniprot/?query='
     url = search_prefix + search_suffix
-    print(url)
     
     # get response from Uniprot
     try:
