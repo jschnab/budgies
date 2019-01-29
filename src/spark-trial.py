@@ -6,13 +6,14 @@ import subprocess
 import re
 import itertools
 import json
+import hashlib
 
 # setup Spark context
 conf = SparkConf().setMaster("spark://ec2-3-92-97-223.compute-1.amazonaws.com:7077").setAppName("Spark trial")
 sc = SparkContext(conf=conf)
 
 # read files
-files = sc.wholeTextFiles("s3://budgies/spark/alice/*.txt")
+files = sc.wholeTextFiles("s3n://budgies/spark/alice/*.txt")
 
 # define regular expression to parse text file
 re_pdb = re.compile(r'[0-9A-Z]{4}')
@@ -23,10 +24,13 @@ re_ref = re.compile(r'[NX]M_[0-9]+')
 # for input in Elasticsearch
 def serialize(RDD):
     dic = {}
+    dic['accession'] = RDD[0]
     dic['pdb'] = RDD[1]
     dic['ensembl'] = RDD[2]
     dic['refseq'] = RDD[3]
-    return (RDD[0], json.dumps(dic))
+    hash_obj = json.dumps(RDD).encode('ascii', 'ignore')
+    dic['doc_id'] = hashlib.sha224(hash_obj).hexdigest()
+    return (dic['doc_id'], json.dumps(dic))
 
 # parse the Uniprot text file
 uniprot_RDD = files.map(lambda pair: (pair[0].split('/')[-1].split('.txt')[0],\
@@ -51,22 +55,23 @@ uniprot_RDD = files.map(lambda pair: (pair[0].split('/')[-1].split('.txt')[0],\
 
 # transform parsed text file for input into Elastic search
 uniprot_dict = uniprot_RDD.map(serialize)
+print('\n\n' + str(uniprot_dict.collect()) + '\n\n')
 
 # Spark action
-result = uniprot_dict.collect()
+#result = uniprot_dict.collect()
 
 # setup Elasticsearch write configuration 
 es_write_conf = {
         'es.nodes': 'localhost',
         'es.port': '9200',
-        'es.resource': 'uniprot',
+        'es.resource': 'test/apache',
         'es.input.json': 'yes',
         'es.mapping.id': 'doc_id'
         }
 
 # save in Elasticsearch
-result.saveAsNewAPIHadoopFile(path='-',
-                              outputFormatClass='org.elasticsearch.hadoop.mr.ESOutputFormat',
+uniprot_dict.saveAsNewAPIHadoopFile(path='-',
+                              outputFormatClass='org.elasticsearch.hadoop.mr.EsOutputFormat',
                               valueClass='org.elasticsearch.hadoop.mr.LinkedMapWritable',
                               conf=es_write_conf)
 
