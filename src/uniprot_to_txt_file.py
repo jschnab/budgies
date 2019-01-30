@@ -20,18 +20,7 @@ re_pdb = re.compile(r'[0-9A-Z]{4}')
 re_ens = re.compile(r'ENSG[0-9]{11}')
 re_ref = re.compile(r'[NX]M_[0-9]+')
 
-# convert parsed text file to a tuple (accession, dictionary)
-# for input in Elasticsearch
-def serialize(RDD):
-    dic = {}
-    dic["accession"] = RDD[0]
-    dic["pdb"] = RDD[1]
-    dic["ensembl"] = RDD[2]
-    dic["refseq"] = RDD[3]
-    hash_obj = json.dumps(RDD).encode('ascii', 'ignore')
-    dic["doc_id"] = hashlib.sha224(hash_obj).hexdigest()
-    return (dic["doc_id"], json.dumps(dic))
-
+# make a dictionary out of Spark output for insertion into Elasticsearch
 def return_dic(results):
     dic = {}
     dic["accession"] = results[0]
@@ -63,10 +52,6 @@ uniprot_RDD = files.map(lambda pair: (pair[0].split('/')[-1].split('.txt')[0],\
                    .filter(lambda pair: pair[1] != [] and pair[2] != [] \
                                         or pair[1] != [] and pair[3] != [])
 
-# transform parsed text file for input into Elastic search
-uniprot_dict = uniprot_RDD.map(serialize)
-#print('\n\n' + str(uniprot_dict.collect()) + '\n\n')
-
 # Spark action
 result = uniprot_RDD.collect()
 
@@ -74,21 +59,6 @@ result = uniprot_RDD.collect()
 with open('/home/ubuntu/spark_uniprot_result.txt', 'w') as outfile:
     for i in result:
         outfile.write(str(return_dic(i)) + '\n')
-
-# setup Elasticsearch write configuration 
-es_write_conf = {
-        'es.nodes': 'localhost',
-        'es.port': '9200',
-        'es.resource': 'test/apache',
-        'es.input.json': 'yes',
-        'es.mapping.id': 'doc_id'
-        }
-
-# save in Elasticsearch
-#uniprot_dict.saveAsNewAPIHadoopFile(path='-',
-#                              outputFormatClass='org.elasticsearch.hadoop.mr.EsOutputFormat',
-#                              valueClass='org.elasticsearch.hadoop.mr.LinkedMapWritable',
-#                              conf=es_write_conf)
 
 # terminate the Spark job
 sys.exit()
