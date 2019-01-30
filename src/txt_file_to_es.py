@@ -10,12 +10,12 @@ headers = {'Content-Type': 'application/json'}
 with open('spark_uniprot_result.txt', 'r') as infile:
     while True:
         line = infile.readline()
-        if line:
+        if line == '':
+            break
+        else:
             dic = json.loads(line.strip('\n').replace("'", '"'))
             identifier = dic['accession']
             r = requests.put(url + identifier, headers=headers, data=json.dumps(dic))
             if not r.ok:
                 with open('errors_txt_to_es.txt', 'a') as log:
                     log.write(r.text + '\n')
-        else:
-            break

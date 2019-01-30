@@ -2,11 +2,9 @@
 
 from pyspark import SparkConf, SparkContext
 import sys
-import subprocess
 import re
 import itertools
 import json
-import hashlib
 
 # setup Spark context
 conf = SparkConf().setMaster("spark://ec2-3-92-97-223.compute-1.amazonaws.com:7077").setAppName("Spark trial")
@@ -22,6 +20,9 @@ re_ref = re.compile(r'[NX]M_[0-9]+')
 
 # make a dictionary out of Spark output for insertion into Elasticsearch
 def return_dic(results):
+"""Return a dictionary with keys accession, description and gene ids\
+for saving as line in a text file. This makes storing into Elasticsearch\
+easier when reading the text file."""
     dic = {}
     dic["accession"] = results[0]
     dic["pdb"] = results[1]
