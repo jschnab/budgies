@@ -35,30 +35,34 @@ def serialize(RDD):
 # parse the Uniprot text file
 uniprot_RDD = files.map(lambda pair: (pair[0].split('/')[-1].split('.txt')[0],\
                                       pair[1].split('\n')))\
-            .map(lambda pair: (pair[0],\
-                               [i.split(';') for i in pair[1] if 'DR   PDB' in i],\
-                               [i.split(';') for i in pair[1] if 'DR   Ensembl' in i],\
-                               [i.split(';') for i in pair[1] if 'DR   RefSeq' in i]))\
-            .map(lambda pair: (pair[0],\
-                               list(itertools.chain.from_iterable(pair[1])),\
-                               list(itertools.chain.from_iterable(pair[2])),\
-                               list(itertools.chain.from_iterable(pair[3]))))\
-            .map(lambda pair: (pair[0],\
-                               [i for i in filter(re_pdb.search, pair[1])],\
-                               [i for i in filter(re_ens.search, pair[2])],\
-                               [i for i in filter(re_ref.search, pair[3])]))\
-            .map(lambda pair: (pair[0],\
-                               [i.lstrip() for i in pair[1]],\
-                               [i.lstrip().split('.')[0] for i in pair[2]],\
-                               [i.lstrip().split('.')[0] for i in pair[3]]))\
-            .filter(lambda pair: pair[1] != [] and pair[2] != [] and pair[3] != [])
+                   .map(lambda pair: (pair[0],\
+                                      [i.split(';') for i in pair[1] if 'DR   PDB' in i],\
+                                      [i.split(';') for i in pair[1] if 'DR   Ensembl' in i],\
+                                      [i.split(';') for i in pair[1] if 'DR   RefSeq' in i]))\
+                   .map(lambda pair: (pair[0],\
+                                      list(itertools.chain.from_iterable(pair[1])),\
+                                      list(itertools.chain.from_iterable(pair[2])),\
+                                      list(itertools.chain.from_iterable(pair[3]))))\
+                   .map(lambda pair: (pair[0],\
+                                      [i for i in filter(re_pdb.search, pair[1])],\
+                                      [i for i in filter(re_ens.search, pair[2])],\
+                                      [i for i in filter(re_ref.search, pair[3])]))\
+                   .map(lambda pair: (pair[0],\
+                                      [i.lstrip() for i in pair[1]],\
+                                      [i.lstrip().split('.')[0] for i in pair[2]],\
+                                      [i.lstrip().split('.')[0] for i in pair[3]]))\
+                   .filter(lambda pair: pair[1] != [] and pair[2] != [] and pair[3] != [])
 
 # transform parsed text file for input into Elastic search
 uniprot_dict = uniprot_RDD.map(serialize)
-print('\n\n' + str(uniprot_dict.collect()) + '\n\n')
+#print('\n\n' + str(uniprot_dict.collect()) + '\n\n')
 
 # Spark action
-#result = uniprot_dict.collect()
+#result = uniprot_RDD.collect()
+
+# write results to a text file
+with open('/home/ubuntu/spark_uniprot_result.txt', 'w') as outfile:
+    outfile.write(result)
 
 # setup Elasticsearch write configuration 
 es_write_conf = {
@@ -70,10 +74,10 @@ es_write_conf = {
         }
 
 # save in Elasticsearch
-uniprot_dict.saveAsNewAPIHadoopFile(path='-',
-                              outputFormatClass='org.elasticsearch.hadoop.mr.EsOutputFormat',
-                              valueClass='org.elasticsearch.hadoop.mr.LinkedMapWritable',
-                              conf=es_write_conf)
+#uniprot_dict.saveAsNewAPIHadoopFile(path='-',
+#                              outputFormatClass='org.elasticsearch.hadoop.mr.EsOutputFormat',
+#                              valueClass='org.elasticsearch.hadoop.mr.LinkedMapWritable',
+#                              conf=es_write_conf)
 
 # terminate the Spark job
 sys.exit()
