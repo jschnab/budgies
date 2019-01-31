@@ -4,7 +4,7 @@
 import json
 import requests
 
-url = 'http://localhost:9200/uniprot/_doc/'
+url = 'http://vpc-budgies-3cg22sou4yelnjfivoz6qbic24.us-east-1.es.amazonaws.com/uniprot/_doc/'
 headers = {'Content-Type': 'application/json'}
 
 with open('spark_uniprot_result.txt', 'r') as infile:

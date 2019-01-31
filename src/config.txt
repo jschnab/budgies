@@ -1,0 +1,2 @@
+accession_file=/home/ubuntu/folders_list.txt
+index=arrayexpress

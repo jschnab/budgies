@@ -116,13 +116,16 @@ backup if Spark job fails."""
 def store_es(index, headers, dic):
     """Store results dictionary in Elasticsearch."""
     data = json.dumps(dic)
-    uri = 'http://localhost:9200/{0}/_doc/{1}'.format(index, dic['accession'])
+
+    uri = 'https://vpc-budgies-3cg22sou4yelnjfivoz6qbic24.us-east-1.es.amazonaws.com\
+/{0}/_doc/{1}'.format(index, dic['accession'])
+
     r = requests.put(uri, headers=headers, data=data)
 
 if __name__ == '__main__':
 
     # setting Spark configuration and context
-    conf = SparkConf().setMaster("spark://ec2-3-92-97-223.compute-1.amazonaws.com:7077").setAppName("AE-to-ES")
+    conf = SparkConf().setMaster("spark://ec2-3-92-97-223.compute-1.amazonaws.com:7077").setAppName("ArrayExpress to Elasticsearch")
     sc = SparkContext(conf=conf)
 
     # headers for later storage in Elasticsearch
@@ -150,9 +153,10 @@ if __name__ == '__main__':
                 # process files if there are any
                 if files != []:
                     gene_ids = get_gene_ids(acc, files[0])
+
                     if len(files) >= 2:
                         for f in files[1:]:
-                        gene_ids += get_gene_ids(acc, f)
+                            gene_ids += get_gene_ids(acc, f)
 
                     # make dictionary of results for one accession
                     result = return_dic(acc, description, gene_ids)
