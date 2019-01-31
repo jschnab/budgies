@@ -9,6 +9,7 @@ import subprocess
 import re
 import itertools
 import json
+import requests
 
 # get list of folders
 def print_help():
@@ -18,55 +19,40 @@ def print_help():
 """Get experiment descriptions and gene identification numbers from\
  ArrayExpress accessions and load data into Elasticsearch.
 
-    python3 arrayexpress_spark_es.py -f[accessions list file] -i[Elasticsearch index]
+    Please provide a configuration file containing the full path to the file\
+containing accession names and the name of the index. See below for the formatting.
 
-    Please provide an option for the accessions list file and Elasticsearch index.
-
-    -f, --file
-    Full path to the text file containing accession names.
-
-    -i, --index
-    Name of the index (i.e. database) to store data in Elasticsearch."""
+    accession_file=<accession file path>
+    index=<index name>
+"""
 
     print(help_text)
 
-def get_args():
-    """Get arguments passed when the script is run at the command line."""
+def get_config():
+    """Return path for the file containing accessions and Elasticsearch index."""
+    with open('config.txt', 'r') as config:
+        while True:
+            line = config.readline()
+            if line == '':
+                break
+            else:
+                splitted = line.split('=')
+                if splitted[0] == 'accession_file':
+                    accessions = splitted[1].strip('\n')
+                elif splitted[0] == 'index':
+                    index = splitted[1].strip('\n')
 
-    try:
-        opts, args = getopt.getopt(sys.argv[1:],
-                'f:i:h',
-                ['file=', 'index=', 'help'])
-
-    except getopt.GetoptError as e:
-        print(e)
-        sys.exit(2)
-
-    accessions_file = None
-
-    for opt, arg in opts:
-        if opt in ('-h', '--help'):
-            print_help()
-            sys.exit()
-
-        elif opt in ('-f', '--file'):
-            accessions_file = arg
-
-    if accessions_file == None:
-        print('Please provide a file containing the accessions list.')
-        sys.exit()
-
-    return accessions_file
+    return accessions, index
 
 def get_files(folder):
     """Get list of experiments files (exclude README, idf and sdrf) from an S3 folder."""
 
     # get S3 folder content from BASH command line
-    bash_cmd = 'aws s3 ls budgies/{0}/'.format(folder)
+    bash_cmd = 'aws s3 ls budgies/arrayexpress2/{0}/'.format(folder)
     bash_result = subprocess.run(bash_cmd.split(), stdout=subprocess.PIPE)
     decoded = bash_result.stdout.decode()
     lines = decoded.split('\n')
-    files = [l.split()[-1] for l in lines][-1]
+    files = [l.split()[-1] for l in lines[:-1]]
 
     # regex to exclude files mentioned above based on negative lookbehind
     r1 = '.*(?<!README)\.txt'
@@ -89,7 +75,7 @@ def get_gene_ids(folder, exp_file):
 
     # transformations on RDD
     gene_ids_RDD = text_file.flatMap(lambda line: line.split('\t'))\
-                            .filter(lambda column: re.match('ENSG[0-9]{11}|[NX]M_[0-9]', column)),
+                            .filter(lambda column: re.match('ENSG[0-9]{11}|[NX]M_[0-9]', column))
 
     # collect gene ids
     gene_ids = gene_ids_RDD.collect()
@@ -99,11 +85,11 @@ def get_gene_ids(folder, exp_file):
 def get_description(folder):
     """Return description of a accession."""
 
-    file_path = 's3n://budgies/arrayexpress2/{0}/*.idf.txt'
+    file_path = 's3n://budgies/arrayexpress2/{0}/*.idf.txt'.format(folder)
     text_file = sc.textFile(file_path)
 
     #transformation on RDD
-    description_RDD = text_file.filter(lambda line: 'Experiment Description' in line),\
+    description_RDD = text_file.filter(lambda line: 'Experiment Description' in line)\
                                .map(lambda line: line.split('\t')[1])
 
     description = description_RDD.collect()
@@ -135,11 +121,15 @@ def store_es(index, headers, dic):
 
 if __name__ == '__main__':
 
+    # setting Spark configuration and context
+    conf = SparkConf().setMaster("spark://ec2-3-92-97-223.compute-1.amazonaws.com:7077").setAppName("AE-to-ES")
+    sc = SparkContext(conf=conf)
+
     # headers for later storage in Elasticsearch
     headers = {'Content-Type': 'application/json'}
     
     # get file with accessions names and index of Elasticsearch
-    accessions_file, index = get_args()
+    accessions_file, index = get_config()
 
     # convert accessions_file content into list
     accessions = []
@@ -147,24 +137,28 @@ if __name__ == '__main__':
 
         # loop until end of file
         while True:
-            acc = acc_file.readline
+            acc = acc_file.readline().strip('\n')
 
-            if acc = '':
+            if acc == '':
                 break
 
             else:
                 # extract data from accession files
                 description = get_description(acc)
                 files = get_files(acc)
-                gene_ids = get_gene_ids(files[0])
-                for f in files[1:]:
-                    gene_ids += get_gene_ids(f)
 
-                # make dictionary of results for one accession
-                result = return_dic(acc, description, gene_ids)
+                # process files if there are any
+                if files != []:
+                    gene_ids = get_gene_ids(acc, files[0])
+                    if len(files) >= 2:
+                        for f in files[1:]:
+                        gene_ids += get_gene_ids(acc, f)
 
-                # save dictionary in text file
-                store_txt(result)
+                    # make dictionary of results for one accession
+                    result = return_dic(acc, description, gene_ids)
 
-                # store result in Elasticsearch
-                store_es(index, headers, result)
+                    # save dictionary in text file
+                    store_txt(result)
+
+                    # store result in Elasticsearch
+                    store_es(index, headers, result)
