@@ -1,2 +1,2 @@
-accession_file=/home/ubuntu/folders_list.txt
+accession_file=/home/ubuntu/trash/folders_list.txt
 index=arrayexpress

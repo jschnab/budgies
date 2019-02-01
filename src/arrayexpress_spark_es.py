@@ -2,6 +2,8 @@
 # ArrayExpress accession's folder stored in S3 and saves results as a text file
 # to be processed further for storage into Elasticsearch
 
+import os
+import sys
 import getopt
 from pyspark import SparkConf, SparkContext
 import sys
@@ -10,6 +12,7 @@ import re
 import itertools
 import json
 import requests
+import time
 
 # get list of folders
 def print_help():
@@ -37,10 +40,14 @@ def get_config():
                 break
             else:
                 splitted = line.split('=')
+                # get the sorted accessions file if it exists
                 if splitted[0] == 'accession_file':
                     accessions = splitted[1].strip('\n')
                 elif splitted[0] == 'index':
                     index = splitted[1].strip('\n')
+
+    if os.path.exists(sys.path[0] + '/sorted_folders.txt'):
+        accessions = sys.path[0] + '/sorted_folders.txt'
 
     return accessions, index
 
@@ -83,7 +90,7 @@ def get_gene_ids(folder, exp_file):
     return gene_ids
 
 def get_description(folder):
-    """Return description of a accession."""
+    """Return description of an accession."""
 
     file_path = 's3n://budgies/arrayexpress2/{0}/*.idf.txt'.format(folder)
     text_file = sc.textFile(file_path)
@@ -111,7 +118,7 @@ def store_txt(dic):
     """Store results dictionary as a line in a text file, as a safety\
 backup if Spark job fails."""
     with open('/home/ubuntu/spark_arrayexpress_result.txt', 'a') as outfile:
-        outfile.write(str(dic) + '\n')
+        outfile.write(str(dic['accession']) + '\n')
 
 def store_es(index, headers, dic):
     """Store results dictionary in Elasticsearch."""
@@ -121,6 +128,12 @@ def store_es(index, headers, dic):
 /{0}/_doc/{1}'.format(index, dic['accession'])
 
     r = requests.put(uri, headers=headers, data=data)
+    with open('es_log.txt', 'a') as outfile:
+        outfile.write(str(r.status_code))
+        if r.text is not None:
+            outfile.write(r.text + '\n')
+        else:
+            outfile.write('\n')
 
 if __name__ == '__main__':
 
