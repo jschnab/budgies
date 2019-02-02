@@ -62,9 +62,9 @@ def get_files(folder):
     files = [l.split()[-1] for l in lines[:-1]]
 
     # regex to exclude files mentioned above based on negative lookbehind
-    r1 = '.*(?<!README)\.txt'
-    r2 = '.*(?<!idf)\.txt'
-    r3 = '.*(?<!sdrf)\.txt'
+    r1 = '.*(?<!README)\.txt$'
+    r2 = '.*(?<!idf)\.txt$'
+    r3 = '.*(?<!sdrf)\.txt$'
 
     files_to_process = []
     for f in files:
@@ -82,7 +82,8 @@ def get_gene_ids(folder, exp_file):
 
     # transformations on RDD
     gene_ids_RDD = text_file.flatMap(lambda line: line.split('\t'))\
-                            .filter(lambda column: re.match('ENSG[0-9]{11}|[NX]M_[0-9]', column))
+                            .filter(lambda column: re.match('ENSG[0-9]{11}|[NX]M_[0-9]+', column))\
+                            .map(lambda column: re.match('ENSG[0-9]{11}|[NX}M_[0-9]+', column).group(0))
 
     # collect gene ids
     gene_ids = gene_ids_RDD.collect()
@@ -159,23 +160,30 @@ if __name__ == '__main__':
                 break
 
             else:
-                # extract data from accession files
-                description = get_description(acc)
-                files = get_files(acc)
+                accessions.append(acc)
 
-                # process files if there are any
-                if files != []:
-                    gene_ids = get_gene_ids(acc, files[0])
+    # loop over accession names and process them
+    for acc in accessions:
 
-                    if len(files) >= 2:
-                        for f in files[1:]:
-                            gene_ids += get_gene_ids(acc, f)
+        # extract data from accession files
+        description = get_description(acc)
+        files = get_files(acc)
 
-                    # make dictionary of results for one accession
-                    result = return_dic(acc, description, gene_ids)
+        # process files if there are any
+        if files != []:
+            gene_ids = get_gene_ids(acc, files[0])
 
-                    # save dictionary in text file
-                    store_txt(result)
+            if len(files) >= 2:
+                for f in files[1:]:
+                    gene_ids += get_gene_ids(acc, f)
 
-                    # store result in Elasticsearch
-                    store_es(index, headers, result)
+            # make dictionary of results for one accession
+            result = return_dic(acc, description, gene_ids)
+
+            # save dictionary in text file
+            store_txt(result)
+
+            # store result in Elasticsearch
+            store_es(index, headers, result)
+
+    sys.exit()

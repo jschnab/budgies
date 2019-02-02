@@ -18,7 +18,8 @@ with open('~/spark_uniprot_results.txt', 'r') as infile:
             break
 
         else:
-            pdb_IDs = line['pdb']
+            dic = json.loads(line.replace("'", '"'))
+            pdb_IDs = dic['pdb']
             for ID in pdb_IDs:
 
                 # get list of ligands
