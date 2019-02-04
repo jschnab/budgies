@@ -9,7 +9,7 @@ uri = 'https://vpc-budgies-3cg22sou4yelnjfivoz6qbic24.us-east-1.es.amazonaws.com
 headers = {"Content-Type":"applicationjson"}
 
 # read data from file containing Uniprot data and extract the PDB ID
-with open('~/spark_uniprot_results.txt', 'r') as infile:
+with open('~/spark_uniprot_result.txt', 'r') as infile:
     
     # loop through lines until end of file
     while True:
