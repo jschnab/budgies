@@ -91,10 +91,6 @@ corresponding to search hits."""
 
     if r.ok:
         hits = json.loads(r.text)['hits']
-        if hits['total'] > 0:
-            with open('results_query_uniprot.txt', 'a') as outfile:
-                for h in hits['hits']:
-                    outfile.write(json.dumps(h))
 
         return hits['total'], hits['hits']
     
@@ -121,23 +117,35 @@ if __name__ == '__main__':
     endpoint, headers = get_config()
 
     #query = build_query()
-    query = '{"size": 1, "sort": ["_score"], \
+    query = '{"size": 10, "sort": ["_score"], \
               "query": {"match": {"description": "diabetes"}}, \
               "_source": ["description", "gene_ids"]}'
 
+    # create text file containing description of Arrayexpress experiments
+    with open('experiment_description.txt', 'w') as outfile: pass
+
     # set of (accession, uniprot ID, PDB ID, molecule name)
+    # which will be saved as csv file
     final_results = set()
 
     # query ArrayExpress index
     n_hits,  arrayexpress_hits = arrayexpress_query(endpoint, 'arrayexpress', headers, query)
+    print('Number of hits : {0}'.format(len(arrayexpress_hits)))
 
     if arrayexpress_hits is not None:
-        for hit in arrayexpress_hits[:1]:
+        for hit in arrayexpress_hits:
+
+            # save experiment's description
+            print('Processing {0}'.format(hit['_id']))
+            print('Number of genes : {0}\n'.format(len(set(hit['_source']['gene_ids']))))
+            if hit['_source']['gene_ids'] != []:
+                with open('experiment_description.txt', 'a') as outfile:
+                    outfile.write(hit['_id'] + ' : ' + str(hit['_source']['description']) + '\n')
 
             # get genes from a hit on ArrayExpress
-            genes = hit['_source']['gene_ids']
+            genes = set(hit['_source']['gene_ids'][:100])
 
-            for g in genes[:100]:
+            for g in genes:
 
                 # check if gene has a corresponding PDB structure with molecules bound to it
                 if g in gene_set:
@@ -149,7 +157,7 @@ if __name__ == '__main__':
                         for uprot_hit in uniprot_hits:
 
                             # get PDB IDs from a hit on Uniprot
-                            pdbids = uprot_hit['_source']['pdb']
+                            pdbids = set(uprot_hit['_source']['pdb'])
 
                             for pdb in pdbids: 
 
@@ -158,11 +166,14 @@ if __name__ == '__main__':
 
                                 if molecules_hits is not None:
                                     for ligand in molecules_hits['_source']['ligand']:
-                                        #print('PDB : {0} --- Name : {1}'.format(ligand['@structureId'], ligand['chemicalName']))
                                         try:
                                             final_results.add((hit['_id'], uprot_hit['_id'], ligand['@structureId'], ligand['chemicalName']))
                                         except TypeError:
                                             pass
 
-    for result in final_results:
-        print(result)
+    # save results as csv file
+    save_path = os.getcwd() + '/output/molecules.csv'
+    with open(save_path, 'w') as outfile:
+        outfile.write('arrayexpress,uniprot,pdb,molecule\n')
+        for result in final_results:
+            outfile.write(','.join(result) + '\n')
