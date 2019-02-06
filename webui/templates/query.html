@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block query %}
+
+<div class="container">
+      <div class="starter-template">
+        <div class="row" style="height:100vh;">
+                <div class="col-md-4 col-md-offset-4" style="margin-top:10vh;">
+                        <form action"emailop" method="POST">
+                                <div class="form-group text-center">
+                                        <label style="font-weight:300; font-size:36px;">Query Budgies</label>
+                                        <br /><br />
+                                        <input type="text" class="form-control" id="query1" name="query1" placeholder="Project Name">
+                                        <br />
+                                        <input type="text" class="form-control" id="query2" name="query2" placeholder="Query">
+                                        <br />
+                                        <input type="text" class="form-control" id="query3" name="query3" placeholder="E-mail">
+                                        <br />
+                                        <button type="submit" value="Send" name="emailid-container" class="btn btn-default id-submit">Submit</button>
+                                </div>
+                        </form>
+                </div>
+        </div>
+      </div>
+
+    </div>
+
+{% endblock %}

@@ -7,9 +7,34 @@ import getopt
 import json
 import requests
 
+def get_args():
+    """Get arguments passed to the script."""
+
+    try: opts, args = getopt.getopt(sys.argv[1:],\
+                 'q:', ['query='])
+
+    except getopt.GetoptError as e:
+        print(e)
+        sys.exit(2)
+
+    if len(args) > 0:
+        print("""This script does not take arguments outside options.
+Please make sure you did not forget to include an option name.""")
+
+    query = None
+
+    for opt, arg in opts:
+        if opt in ('-q', '--query'):
+            query = arg
+
+    return query
+
 def get_config():
     """Read configuration file to get headers and Elasticsearch endpoint."""
-    with open('config.txt', 'r') as config:
+
+    home = os.getenv('HOME', 'default')
+
+    with open(home + '/budgies/src/config.txt', 'r') as config:
         while True:
             line = config.readline()
             if line == '':
@@ -22,14 +47,14 @@ def get_config():
                 elif splitted[0] == 'headers':
                     headers = json.loads(splitted[1].strip('\n').replace("'", '"'))
 
-    return endpoint, headers
+    return home, endpoint, headers
 
 def get_uniprot_geneset():
     """Get set of genes present in uniprot index of Elasticsearch."""
 
     gene_set = set()
 
-    with open('uniprot_geneset.txt', 'r') as infile:
+    with open(home + 'budgies/src/uniprot_geneset.txt', 'r') as infile:
         while True:
             line = infile.readline()
             if line.strip('\n') == '':
@@ -45,7 +70,7 @@ which correspond to PDB IDs with molecules attached to them."""
 
     gene_set = set()
 
-    with open('genes_molecules.txt', 'r') as infile:
+    with open(home + '/budgies/src/genes_molecules.txt', 'r') as infile:
         while True:
             line = infile.readline().strip('\n')
             if line.strip('\n') == '':
@@ -55,9 +80,23 @@ which correspond to PDB IDs with molecules attached to them."""
 
     return gene_set
 
-def build_query():
+def build_query(raw_query):
     """Build search query to pass as data in requests.get() from
-'+'-separated keywords passed as command line arguments."""
+keywords passed as command line arguments."""
+
+    operators = ['AND', 'OR', 'NOT']
+
+    if any(op in raw_query for op in operators):
+        query = '{"query": {"query_string": {"default_field": "description",\
+                                           "query": "' + raw_query + '"}},\
+                  "_source": ["description", "gene_ids"]}'
+
+    else:
+        query = '{"size": 10, "sort": ["_score"], \
+                  "query": {"match": {"description": "' + raw_query + '"}}, \
+                  "_source": ["description", "gene_ids"]}'
+
+    return query
 
 def arrayexpress_query(endpoint, index, headers, data):
     """Search Elasticsearch ArrayExpress index for experiment description \
@@ -107,22 +146,31 @@ corresponding to search hits."""
 
         return json.loads(r.text)
 
-if __name__ == '__main__':
+def save_csv(results):
+    """Save results of Elasticsearch query as a csv file."""
+
+    save_path = home  + '/budgies/output/molecules.csv'
+    with open(save_path, 'w') as outfile:
+        outfile.write('arrayexpress,uniprot,pdb,molecule\n')
+        for result in results:
+            outfile.write(','.join(result) + '\n')
+
+def send_query():
+    """Query Elasticsearch with user input, save the results in AWS S3
+and send an email to the user to allow downloading of results."""
 
     # get set of genes present in "uniprot" index of Elasticsearch
     # and which correspond to PDB IDs with molecule(s) bound to them
     # to avoid searching gene IDs which are not in the index
     gene_set = get_molecules_geneset()
     
-    endpoint, headers = get_config()
+    home, endpoint, headers = get_config()
 
-    #query = build_query()
-    query = '{"size": 10, "sort": ["_score"], \
-              "query": {"match": {"description": "diabetes"}}, \
-              "_source": ["description", "gene_ids"]}'
+    query = build_query(get_args())
 
     # create text file containing description of Arrayexpress experiments
-    with open('experiment_description.txt', 'w') as outfile: pass
+    with open(home + '/budgies/output/experiment_description.txt', 'w') as outfile:
+        pass
 
     # set of (accession, uniprot ID, PDB ID, molecule name)
     # which will be saved as csv file
@@ -139,7 +187,7 @@ if __name__ == '__main__':
             print('Processing {0}'.format(hit['_id']))
             print('Number of genes : {0}\n'.format(len(set(hit['_source']['gene_ids']))))
             if hit['_source']['gene_ids'] != []:
-                with open('experiment_description.txt', 'a') as outfile:
+                with open(home + '/budgies/output/experiment_description.txt', 'a') as outfile:
                     outfile.write(hit['_id'] + ' : ' + str(hit['_source']['description']) + '\n')
 
             # get genes from a hit on ArrayExpress
@@ -170,10 +218,4 @@ if __name__ == '__main__':
                                             final_results.add((hit['_id'], uprot_hit['_id'], ligand['@structureId'], ligand['chemicalName']))
                                         except TypeError:
                                             pass
-
-    # save results as csv file
-    save_path = os.getcwd() + '/output/molecules.csv'
-    with open(save_path, 'w') as outfile:
-        outfile.write('arrayexpress,uniprot,pdb,molecule\n')
-        for result in final_results:
-            outfile.write(','.join(result) + '\n')
+    save_csv(final_results)

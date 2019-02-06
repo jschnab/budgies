@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block queryresponse %}
+
+<div class="container">
+  <div class="starter-template">
+    <div class="row" style="height:100vh;">
+      <div class="col-md-4 col-md-offset-4" style="margin-top:10vh;">
+	<body>
+	    <ul style="list-style: none;">
+	      {% for num in array1 %}
+	        <li>{{num}}</li>
+	      {% endfor %}
+	    </ul>
+	    <ul>
+	      {% for num in array2 %}
+	        <li style="margin: 10px 0";>{{num}}</li>
+	      {% endfor %}
+	    </ul>
+	</body>               
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
