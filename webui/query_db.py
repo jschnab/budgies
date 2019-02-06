@@ -27,6 +27,7 @@ def get_config():
 
     return home, endpoint, headers
 
+# the following function is deprecated
 def get_uniprot_geneset():
     """Get set of genes present in uniprot index of Elasticsearch."""
 
@@ -42,7 +43,7 @@ def get_uniprot_geneset():
 
     return gene_set
 
-def get_molecules_geneset():
+def get_molecules_geneset(home):
     """Get set of genes present in uniprot index of Elasticsearch and
 which correspond to PDB IDs with molecules attached to them."""
 
@@ -124,18 +125,20 @@ corresponding to search hits."""
 
         return json.loads(r.text)
 
-def save_csv(results):
+def save_csv(home, results):
     """Save results of Elasticsearch query as a csv file."""
 
     save_path = home  + '/budgies/output/molecules.csv'
     with open(save_path, 'w') as outfile:
-        outfile.write('arrayexpress,uniprot,pdb,molecule\n')
+        outfile.write('arrayexpress\tuniprot\tpdb\tmolecule\n')
         for result in results:
-            outfile.write(','.join(result) + '\n')
+            outfile.write('\t'.join(result) + '\n')
 
-def copy_to_S3(project, email):
+def copy_to_s3(project, email):
     """Copy results to AWS S3 "project" folder after zipping 
 and send email to user."""
+
+    home = os.getenv('HOME', 'default')
 
     # zip results
     cmd1 = 'tar -czvf results.tar.gz \
@@ -153,7 +156,7 @@ and send email to user."""
 From: budgies.results@gmail.com\n\nYou can download your results from : \
 https://s3.amazonaws.com/budgies-results/{1}/results.tar.gz'.format(email, project)
 
-    with open(home + 'budgies/budgies/webui/email.txt', 'w') as outfile:
+    with open(home + '/budgies/webui/email.txt', 'w') as outfile:
         outfile.write(text)
 
     # send email to user
@@ -165,19 +168,17 @@ https://s3.amazonaws.com/budgies-results/{1}/results.tar.gz'.format(email, proje
     subprocess.run(cmd3.split())
     subprocess.run(cmd4.split())
 
-def send_query(query):
+def send_query(raw_query):
     """Query Elasticsearch with user input, save the results in AWS S3
 and send an email to the user to allow downloading of results."""
+   
+    home, endpoint, headers = get_config()
 
     # get set of genes present in "uniprot" index of Elasticsearch
     # and which correspond to PDB IDs with molecule(s) bound to them
     # to avoid searching gene IDs which are not in the index
-    gene_set = get_molecules_geneset()
-    
-    home, endpoint, headers = get_config()
-
-    #query = build_query(get_args())
-
+    gene_set = get_molecules_geneset(home)
+ 
     # create text file containing description of Arrayexpress experiments
     with open(home + '/budgies/output/experiment_description.txt', 'w') as outfile:
         pass
@@ -185,6 +186,9 @@ and send an email to the user to allow downloading of results."""
     # set of (accession, uniprot ID, PDB ID, molecule name)
     # which will be saved as csv file
     final_results = set()
+
+    # build query with the proper structure for Elasticsearch
+    query = build_query(raw_query)
 
     # query ArrayExpress index
     n_hits,  arrayexpress_hits = arrayexpress_query(endpoint, 'arrayexpress', headers, query)
@@ -228,4 +232,4 @@ and send an email to the user to allow downloading of results."""
                                             final_results.add((hit['_id'], uprot_hit['_id'], ligand['@structureId'], ligand['chemicalName']))
                                         except TypeError:
                                             pass
-    save_csv(final_results)
+    save_csv(home, final_results)

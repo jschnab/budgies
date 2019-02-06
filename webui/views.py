@@ -1,4 +1,4 @@
-#The views module for the flask webapp.
+# views module for the flask web app
 
 import sys
 import os
@@ -9,8 +9,8 @@ from query_db import *
 from flask import render_template, request
 from webui import app
 
-#App contains two pages: Query forms and Query results
-#base.html provides webpage header with title (linked to query form page) and "about" link, which connects to presentation
+# base.html provides webpage header with title (linked to query form page) 
+# and "about" link, which connects to presentation
 
 @app.route('/')
 def query():
@@ -23,4 +23,5 @@ def query_post():
     query3 = request.form["query3"]
     query_response = send_query(query1)
     save_results = copy_to_s3(query2, query3)
+
     return render_template("response.html")
