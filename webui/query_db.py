@@ -3,31 +3,9 @@
 
 import os
 import sys
-import getopt
 import json
 import requests
-
-def get_args():
-    """Get arguments passed to the script."""
-
-    try: opts, args = getopt.getopt(sys.argv[1:],\
-                 'q:', ['query='])
-
-    except getopt.GetoptError as e:
-        print(e)
-        sys.exit(2)
-
-    if len(args) > 0:
-        print("""This script does not take arguments outside options.
-Please make sure you did not forget to include an option name.""")
-
-    query = None
-
-    for opt, arg in opts:
-        if opt in ('-q', '--query'):
-            query = arg
-
-    return query
+import subprocess
 
 def get_config():
     """Read configuration file to get headers and Elasticsearch endpoint."""
@@ -155,7 +133,39 @@ def save_csv(results):
         for result in results:
             outfile.write(','.join(result) + '\n')
 
-def send_query():
+def copy_to_S3(project, email):
+    """Copy results to AWS S3 "project" folder after zipping 
+and send email to user."""
+
+    # zip results
+    cmd1 = 'tar -czvf results.tar.gz \
+{0}/budgies/output/experiment_description.txt \
+{0}/budgies/output/molecules.csv'.format(home)
+
+    # send results to S3
+    cmd2 = 'aws s3 cp results.tar.gz s3://budgies-results/{0}/'.format(project)
+
+    # delete tar file
+    cmd3 = 'rm results.tar.gz'
+
+    # save email text in a file
+    text = 'To: {0}\nSubject: Your results are ready\n\
+From: budgies.results@gmail.com\n\nYou can download your results from : \
+https://s3.amazonaws.com/budgies-results/{1}/results.tar.gz'.format(email, project)
+
+    with open(home + 'budgies/budgies/webui/email.txt', 'w') as outfile:
+        outfile.write(text)
+
+    # send email to user
+    cmd4 = 'sendmail -v {0} < email.txt'.format(email)
+
+    # run bash commands
+    subprocess.run(cmd1.split())
+    subprocess.run(cmd2.split())
+    subprocess.run(cmd3.split())
+    subprocess.run(cmd4.split())
+
+def send_query(query):
     """Query Elasticsearch with user input, save the results in AWS S3
 and send an email to the user to allow downloading of results."""
 
@@ -166,7 +176,7 @@ and send an email to the user to allow downloading of results."""
     
     home, endpoint, headers = get_config()
 
-    query = build_query(get_args())
+    #query = build_query(get_args())
 
     # create text file containing description of Arrayexpress experiments
     with open(home + '/budgies/output/experiment_description.txt', 'w') as outfile:
