@@ -6,14 +6,12 @@
 3. [Approach](README.md##approach)
 4. [Pipeline](README.md##pipleline)
 5. [Challenges](README.md##challenges)
-6. [Repository structure](README.md##repository structure)
+6. [Repository structure](README.md##structure)
 7. [Questions?](README.md##questions?)
 
 ## Introduction
 
 Quick as a Batch is a data analysis tool which aims at facilitating drug discovery by integrating biological databases with Apache Spark. It provides a web interface built with Flask to query an Elasticsearch database and provides fast results. This project was achieved in three weeks while I was a fellow at Insight Data Science, a company helping people with skills in software engineering to transition to data engineering.
-
-Please read my [demonstration](https://bit.ly/2BotnFY)
 
 ## Motivation
 
@@ -30,3 +28,5 @@ The data is ingested from the external databases thanks to scripts automating AP
 Spark is used to parse the text files and extract useful information from them (list of genes, of proteins, etc.). The output is dictionaries which are serialized for storage in Elasticsearch.
 
 Elasticsearch contains three indices: arrayexpress (genes), uniprot (proteins) and molecules. When a user sends a query to Quick as a Batch, keywords are used to query arrayexpress on experiment descriptions. Matches give a gene list which is used to query the uniprot index. However, since the arrayexpress index typically return x100,000 genes, a filtering step happens to query the uniprot index only with genes that are known to be stored in it. This is because there is currently a small overlap between the two indices, so a lot of computation time would be spent looking for records which are not there. Finally, the results returned by the uniprot index are used to query the molecules index, yielding a list of molecules. There is 100% overlap between uniprot and molecules indices.
+
+
