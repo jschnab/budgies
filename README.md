@@ -34,7 +34,7 @@ I used Flask to build a web interface on which users can enter keywords (e.g. a 
 ## Challenges
 
 ## Repository structure
-
+```
 budgies/
   |- src
   | |- ingestion/
@@ -77,7 +77,7 @@ budgies/
   |- docs/
   |- run.py
   |- README.md
-
+```
 ## Support
 
 For any question, send an email to budgies.results@gmail.com.
