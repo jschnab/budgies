@@ -8,7 +8,7 @@
 3. [Approach](README.md#approach)
 4. [Pipeline](README.md#pipleline)
 5. [Challenges](README.md#challenges)
-6. [Repository structure](README.md#repository structure)
+6. [Repository structure](README.md#repository%20structure)
 7. [Support](README.md#support)
 
 ## Introduction
@@ -53,6 +53,7 @@ budgies/
   |   |- uniprot_to_txt_file.py
   |   |- txt_file_to_es.py
   |   |- spark_uniprot_es.sh
+  |   |- genes_molecules.py
   |   |- config.txt
   |- webui/
   | |- output/
