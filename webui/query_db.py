@@ -6,6 +6,10 @@ import sys
 import json
 import requests
 import subprocess
+from email.message import EmailMessage
+from email.utils import formatdate
+from smtplib import SMTP_SSL
+from ssl import create_default_context
 
 def get_config():
     """Read configuration file to get headers and Elasticsearch endpoint."""
@@ -134,9 +138,8 @@ def save_csv(home, results):
         for result in results:
             outfile.write('\t'.join(result) + '\n')
 
-def copy_to_s3(project, email):
-    """Copy results to AWS S3 "project" folder after zipping 
-and send email to user."""
+def copy_to_s3(project):
+    """Copy results to AWS S3 "project" folder after zipping."""
 
     home = os.getenv('HOME', 'default')
 
@@ -151,22 +154,33 @@ and send email to user."""
     # delete tar file
     cmd3 = 'rm results.tar.gz'
 
-    # save email text in a file
-    text = 'To: {0}\nSubject: Your results are ready\n\
-From: budgies.results@gmail.com\n\nYou can download your results from : \
-https://s3.amazonaws.com/budgies-results/{1}/results.tar.gz'.format(email, project)
-
-    with open(home + '/budgies/webui/email.txt', 'w') as outfile:
-        outfile.write(text)
-
-    # send email to user
-    cmd4 = 'sendmail -v {0} < email.txt'.format(email)
-
     # run bash commands
     subprocess.run(cmd1.split())
     subprocess.run(cmd2.split())
     subprocess.run(cmd3.split())
-    subprocess.run(cmd4.split())
+
+def send_email(project, email):
+    """Send an email to the user with a link to results."""
+
+    # message information
+    msg = EmailMessage()
+    text = 'Hello, the query you sent to Quick as a Batch has finished processing.\n\
+You can download your results from \
+https://s3.amazonaws.com/budgies-results/{0}/results.tar.gz\n\
+Thank you for using Quick as a Batch!\n\nThe dev team'.format(project)
+    msg.set_content(text)
+    msg['Subject'] = 'Quick as a Batch finished processing your query'
+    msg['From'] = 'budgies.results@gmail.com'
+    msg['To'] = email
+    msg['Date'] = formatdate(localtime=True)
+
+    # SMTP session
+    context = create_default_context()
+    s = SMTP_SSL('smtp.gmail.com', context=context)
+    password = os.getenv('GMAIL_PASSWORD', 'default')
+    s.login('budgies.results@gmail.com', password)
+    s.send_message(msg)
+    s.quit()
 
 def send_query(raw_query):
     """Query Elasticsearch with user input, save the results in AWS S3

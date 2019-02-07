@@ -22,6 +22,7 @@ def query_post():
     query2 = request.form["query2"]
     query3 = request.form["query3"]
     query_response = send_query(query1)
-    save_results = copy_to_s3(query2, query3)
+    save_results = copy_to_s3(query2)
+    send_results = send_email(query2, query3)
 
     return render_template("response.html")
