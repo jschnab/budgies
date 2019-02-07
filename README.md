@@ -1,13 +1,15 @@
-# Quick as a Batch (aka budgies) - Facilitating drug discovery through databases integration
+# Quick as a Batch (aka budgies) 
+
+### Facilitating drug discovery through databases integration
 
 ## Table of Contents
-1. [Introduction](README.md##introduction)
-2. [Motivation](README.md##motivation)
-3. [Approach](README.md##approach)
-4. [Pipeline](README.md##pipleline)
-5. [Challenges](README.md##challenges)
-6. [Repository structure](README.md##repository%20structure)
-7. [Support](README.md##support)
+1. [Introduction](README.md#introduction)
+2. [Motivation](README.md#motivation)
+3. [Approach](README.md#approach)
+4. [Pipeline](README.md#pipleline)
+5. [Challenges](README.md#challenges)
+6. [Repository structure](README.md#repository structure)
+7. [Support](README.md#support)
 
 ## Introduction
 
