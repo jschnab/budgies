@@ -130,7 +130,7 @@ corresponding to search hits."""
         return json.loads(r.text)
 
 def save_csv(home, results):
-    """Save results of Elasticsearch query as a csv file."""
+    """Save results of Elasticsearch query as a tab-separated values file."""
 
     save_path = home  + '/budgies/output/molecules.csv'
     with open(save_path, 'w') as outfile:
@@ -144,15 +144,15 @@ def copy_to_s3(project):
     home = os.getenv('HOME', 'default')
 
     # zip results
-    cmd1 = 'tar -czvf results.tar.gz \
-{0}/budgies/output/experiment_description.txt \
-{0}/budgies/output/molecules.csv'.format(home)
+    cmd1 = 'tar -C {0}/budgies/output/ -czvf results.tar.gz \
+experiment_description.txt molecules.csv'.format(home)
 
     # send results to S3
-    cmd2 = 'aws s3 cp results.tar.gz s3://budgies-results/{0}/'.format(project)
+    cmd2 = 'aws s3 cp {0}/budgies/results.tar.gz \
+s3://budgies-results/{1}/'.format(home, project)
 
     # delete tar file
-    cmd3 = 'rm results.tar.gz'
+    cmd3 = 'rm {0}/budgies/results.tar.gz'.format(home)
 
     # run bash commands
     subprocess.run(cmd1.split())
