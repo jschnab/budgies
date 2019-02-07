@@ -6,8 +6,8 @@
 3. [Approach](README.md##approach)
 4. [Pipeline](README.md##pipleline)
 5. [Challenges](README.md##challenges)
-6. [Repository structure](README.md##structure)
-7. [Questions?](README.md##questions?)
+6. [Repository structure](README.md##repository%20structure)
+7. [Support](README.md##support)
 
 ## Introduction
 
@@ -29,4 +29,55 @@ Spark is used to parse the text files and extract useful information from them (
 
 Elasticsearch contains three indices: arrayexpress (genes), uniprot (proteins) and molecules. When a user sends a query to Quick as a Batch, keywords are used to query arrayexpress on experiment descriptions. Matches give a gene list which is used to query the uniprot index. However, since the arrayexpress index typically return x100,000 genes, a filtering step happens to query the uniprot index only with genes that are known to be stored in it. This is because there is currently a small overlap between the two indices, so a lot of computation time would be spent looking for records which are not there. Finally, the results returned by the uniprot index are used to query the molecules index, yielding a list of molecules. There is 100% overlap between uniprot and molecules indices.
 
+I used Flask to build a web interface on which users can enter keywords (e.g. a disease such as diabetes), a project name and an email address to be alerted when their computation is completed.
 
+## Challenges
+
+## Repository structure
+
+budgies/
+  |- src
+  | |- ingestion/
+  | | |- arrayexpress_experiments.py
+  | | |- arrayexpress_files.py
+  | | |- download_arrayexpress.sh
+  | | |- uniprot_files.py
+  | | |- get_molecules.py
+  | | |- headers.json
+  | |- spark/
+  |   |- arrayexpress_spark_es.py
+  |   |- sort_s3_folder.py
+  |   |- sort_s3_folder.sh
+  |   |- uniprot_to_txt_file.py
+  |   |- txt_file_to_es.py
+  |   |- spark_uniprot_es.sh
+  |   |- config.txt
+  |- webui/
+  | |- output/
+  | |- static/
+  | | |- css/
+  | | |- fonts/
+  | | |- js/
+  | |- templates/
+  | | |- base.html
+  | | |- query.html
+  | | |- response.html
+  | |- __init__.py
+  | |- view.py
+  | |- query_db.py
+  |- tools/
+  | |- unique_geneids.py
+  | |- unique_pdbids.py
+  |- test/
+  | |- test_new_accessions_2/
+  | | |- ref_exp-20131231.json
+  | | |- ref_exp-20140101.json
+  | |- test_arrayexpress_files.py
+  | |- ref_exp.json
+  |- docs/
+  |- run.py
+  |- README.md
+
+## Support
+
+For any question, send an email to budgies.results@gmail.com.
