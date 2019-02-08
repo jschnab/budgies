@@ -35,7 +35,7 @@ I used Flask to build a web interface on which users can enter keywords (e.g. a 
 
 ## Challenges
 
-## Repository structure
+## Repository%20structure
 ```
 budgies/
   |- src
@@ -47,14 +47,14 @@ budgies/
   | | |- get_molecules.py
   | | |- headers.json
   | |- spark/
-  |   |- arrayexpress_spark_es.py
-  |   |- sort_s3_folder.py
-  |   |- sort_s3_folder.sh
-  |   |- uniprot_to_txt_file.py
-  |   |- txt_file_to_es.py
-  |   |- spark_uniprot_es.sh
-  |   |- genes_molecules.py
-  |   |- config.txt
+  | | |- arrayexpress_spark_es.py
+  | | |- sort_s3_folder.py
+  | | |- sort_s3_folder.sh
+  | | |- uniprot_to_txt_file.py
+  | | |- txt_file_to_es.py
+  | | |- spark_uniprot_es.sh
+  | | |- genes_molecules.py
+  | |- config.txt
   |- webui/
   | |- output/
   | |- static/

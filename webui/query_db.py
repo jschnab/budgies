@@ -144,7 +144,7 @@ def copy_to_s3(project):
     home = os.getenv('HOME', 'default')
 
     # zip results
-    cmd1 = 'tar -C {0}/budgies/output/ -czvf results.tar.gz \
+    cmd1 = 'tar -C {0}/budgies/output/ -czf results.tar.gz \
 experiment_description.txt molecules.csv'.format(home)
 
     # send results to S3
@@ -161,6 +161,8 @@ s3://budgies-results/{1}/'.format(home, project)
 
 def send_email(project, email):
     """Send an email to the user with a link to results."""
+
+    print('Sending email to {0} (project : {1})'.format(email, project))
 
     # message information
     msg = EmailMessage()
@@ -182,7 +184,7 @@ Thank you for using Quick as a Batch!\n\nThe dev team'.format(project)
     s.send_message(msg)
     s.quit()
 
-def send_query(raw_query):
+def send_query(raw_query, project, email):
     """Query Elasticsearch with user input, save the results in AWS S3
 and send an email to the user to allow downloading of results."""
    
@@ -203,17 +205,18 @@ and send an email to the user to allow downloading of results."""
 
     # build query with the proper structure for Elasticsearch
     query = build_query(raw_query)
+    print('Query : {0} (project : {1})'.format(raw_query, project))
 
     # query ArrayExpress index
     n_hits,  arrayexpress_hits = arrayexpress_query(endpoint, 'arrayexpress', headers, query)
-    print('Number of hits : {0}'.format(len(arrayexpress_hits)))
+    print('Number of hits : {0} (project : {1})'.format(len(arrayexpress_hits), project))
 
     if arrayexpress_hits is not None:
         for hit in arrayexpress_hits:
 
             # save experiment's description
-            print('Processing {0}'.format(hit['_id']))
-            print('Number of genes : {0}\n'.format(len(set(hit['_source']['gene_ids']))))
+            print('Processing {0} (project : {1})'.format(hit['_id'], project))
+            print('Number of genes : {0} (project : {1})'.format(len(set(hit['_source']['gene_ids'])), project))
             if hit['_source']['gene_ids'] != []:
                 with open(home + '/budgies/output/experiment_description.txt', 'a') as outfile:
                     outfile.write(hit['_id'] + ' : ' + str(hit['_source']['description']) + '\n')
@@ -247,3 +250,5 @@ and send an email to the user to allow downloading of results."""
                                         except TypeError:
                                             pass
     save_csv(home, final_results)
+    copy_to_s3(project)
+    send_email(project, email)
