@@ -222,7 +222,7 @@ and send an email to the user to allow downloading of results."""
                     outfile.write(hit['_id'] + ' : ' + str(hit['_source']['description']) + '\n')
 
             # get genes from a hit on ArrayExpress
-            genes = set(hit['_source']['gene_ids'][:100])
+            genes = set(hit['_source']['gene_ids'])
 
             for g in genes:
 
