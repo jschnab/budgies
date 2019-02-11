@@ -5,6 +5,7 @@ import sys
 import re
 import itertools
 import json
+import requests
 
 # setup Spark context
 conf = SparkConf().setMaster("spark://ec2-3-92-97-223.compute-1.amazonaws.com:7077").setAppName("Uniprot-to-txt")
@@ -60,6 +61,18 @@ result = uniprot_RDD.collect()
 with open('/home/ubuntu/spark_uniprot_result.txt', 'w') as outfile:
     for i in result:
         outfile.write(str(return_dic(i)) + '\n')
+
+# load data in Elasticsearch uniprot index
+url = 'http://vpc-budgies-3cg22sou4yelnjfivoz6qbic24.us-east-1.es.amazonaws.com/uniprot/_doc/'
+headers = {'Content-Type': 'application/json'}
+ 
+for res in result:
+    dic = return_dic(res)
+    identifier = dic['accession']
+    r = requests.put(url + identifier, headers=headers, data=json.dumps(dic))
+    if not r.ok:
+        with open('errors_uniprot_es.txt', 'a') as log:
+            log.write(r.text + '\n')
 
 # terminate the Spark job
 sys.exit()
