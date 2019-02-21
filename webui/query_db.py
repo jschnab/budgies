@@ -10,42 +10,26 @@ from email.message import EmailMessage
 from email.utils import formatdate
 from smtplib import SMTP_SSL
 from ssl import create_default_context
+from elasticsearch import Elasticsearch
 
 def get_config():
     """Read configuration file to get headers and Elasticsearch endpoint."""
 
     home = os.getenv('HOME', 'default')
 
-    with open(home + '/budgies/src/config.txt', 'r') as config:
-        while True:
-            line = config.readline()
-            if line == '':
-                break
+    # get Elasticsearch cluster IP addresses
+    hosts = []
+    hosts.append(os.getenv('MASTER_IP', 'default'))
+    hosts.append(os.getenv('WORKER1_IP', 'default'))
+    hosts.append(os.getenv('WORKER3_IP', 'default'))
+    hosts.append(os.getenv('WORKER2_IP', 'default'))
 
-            else:
-                splitted = line.split('=')
-                if splitted[0] == 'elasticsearch_endpoint':
-                    endpoint = splitted[1].strip('\n')
-                elif splitted[0] == 'headers':
-                    headers = json.loads(splitted[1].strip('\n').replace("'", '"'))
+    # get Elasticsearch cluster credentials
+    credentials = []
+    credentials.append(os.getenv('ES_ACCESS_KEY', 'default'))
+    credentials.append(os.getenv('ES_SECRET_ACCESS_KEY', 'default'))
 
-    return home, endpoint, headers
-
-# the following function is deprecated
-def get_uniprot_geneset():
-    """Get set of genes present in uniprot index of Elasticsearch."""
-
-    gene_set = set()
-
-    with open(home + 'budgies/src/uniprot_geneset.txt', 'r') as infile:
-        while True:
-            line = infile.readline()
-            if line.strip('\n') == '':
-                break
-            else:
-                gene_set.add(line.strip('\n'))
-
-    return gene_set
+    return home, hosts, credentials
 
 def get_molecules_geneset(home):
     """Get set of genes present in uniprot index of Elasticsearch and
