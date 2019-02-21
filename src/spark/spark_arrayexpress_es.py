@@ -13,6 +13,7 @@ import itertools
 import json
 import requests
 import time
+from elasticsearch import Elasticsearch
 
 # get list of folders
 def print_help():
@@ -30,6 +31,7 @@ containing accession names and the name of the index. See below for the formatti
 """
 
     print(help_text)
+    sys.exit()
 
 def get_config():
     """Return path for the file containing accessions and Elasticsearch index."""
@@ -49,7 +51,19 @@ def get_config():
     if os.path.exists(sys.path[0] + '/sorted_folders.txt'):
         accessions = sys.path[0] + '/sorted_folders.txt'
 
-    return accessions, index
+    # get Elasticsearch cluster IP addresses
+    hosts = []
+    hosts.append(os.getenv('MASTER_IP', 'default'))
+    hosts.append(os.getenv('WORKER1_IP', 'default'))
+    hosts.append(os.getenv('WORKER2_IP', 'default'))
+    hosts.append(os.getenv('WORKER3_IP', 'default'))
+
+    # get Elasticsearch credentials
+    credentials = []
+    credentials.append(os.getenv('ES_ACCESS_KEY', 'default'))
+    credentials.append(os.getenv('ES_SECRET_ACCESS_KEY', 'default'))
+
+    return accessions, index, hosts, credentials
 
 def get_files(folder):
     """Get list of experiments files (exclude README, idf and sdrf) from an S3 folder."""
@@ -121,20 +135,14 @@ backup if Spark job fails."""
     with open('/home/ubuntu/spark_arrayexpress_result.txt', 'a') as outfile:
         outfile.write(str(dic['accession']) + '\n')
 
-def store_es(index, headers, dic):
+def store_es(es, index, dic):
     """Store results dictionary in Elasticsearch."""
-    data = json.dumps(dic)
 
-    uri = 'https://vpc-budgies-3cg22sou4yelnjfivoz6qbic24.us-east-1.es.amazonaws.com\
-/{0}/_doc/{1}'.format(index, dic['accession'])
+    result = es.index(index=index, doc_type='_doc', body=dic, id=dic['accession'])
 
-    r = requests.put(uri, headers=headers, data=data)
     with open('es_log.txt', 'a') as outfile:
-        outfile.write(str(r.status_code))
-        if r.text is not None:
-            outfile.write(r.text + '\n')
-        else:
-            outfile.write('\n')
+        if result is not None:
+            outfile.write(json.loads(results) + '\n')
 
 if __name__ == '__main__':
 
@@ -142,11 +150,10 @@ if __name__ == '__main__':
     conf = SparkConf().setMaster("spark://ec2-3-92-97-223.compute-1.amazonaws.com:7077").setAppName("ArrayExpress to Elasticsearch")
     sc = SparkContext(conf=conf)
 
-    # headers for later storage in Elasticsearch
-    headers = {'Content-Type': 'application/json'}
-    
     # get file with accessions names and index of Elasticsearch
-    accessions_file, index = get_config()
+    accessions_file, index, hosts, credentials = get_config()
+
+    es = Elasticsearch(hosts, http_auth=credentials, port=9200, sniff_on_start=True)
 
     # convert accessions_file content into list
     accessions = []
@@ -184,6 +191,6 @@ if __name__ == '__main__':
             store_txt(result)
 
             # store result in Elasticsearch
-            store_es(index, headers, result)
+            store_es(es, index, result)
 
     sys.exit()
