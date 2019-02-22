@@ -1,0 +1,4 @@
+accession_file=/home/ubuntu/folders_list.txt
+index=arrayexpress
+elasticsearch_endpoint=https://vpc-budgies-3cg22sou4yelnjfivoz6qbic24.us-east-1.es.amazonaws.com/
+headers={"Content-Type":"application/json"}
