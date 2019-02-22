@@ -2,9 +2,7 @@
 # to get small molecules from protein structures
 
 import os
-import sys
 import json
-import requests
 import subprocess
 from email.message import EmailMessage
 from email.utils import formatdate
@@ -215,7 +213,7 @@ and send an email to the user to allow downloading of results."""
                             for pdb in pdbids: 
 
                                 # get molecules corresponding to a PDB ID
-                                molecules_hits = molecules_query(endpoint, 'molecules', headers, pdb)
+                                molecules_hits = molecules_query(es, 'molecules', pdb)
 
                                 if molecules_hits is not None:
                                     for ligand in molecules_hits['_source']['ligand']:
