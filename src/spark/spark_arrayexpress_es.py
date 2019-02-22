@@ -142,7 +142,7 @@ def store_es(es, index, dic):
 
     with open('es_log.txt', 'a') as outfile:
         if result is not None:
-            outfile.write(json.loads(results) + '\n')
+            outfile.write(json.loads(result) + '\n')
 
 if __name__ == '__main__':
 
