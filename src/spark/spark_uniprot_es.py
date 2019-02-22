@@ -7,6 +7,19 @@ import itertools
 import json
 import requests
 
+#=== Configure Elasticsearch connection ===#
+# get Elasticsearch cluter IP addresses
+hosts = []
+hosts.append(os.getenv('MASTER_IP', 'default'))
+hosts.append(os.getenv('WORKER1_IP', 'default'))
+hosts.append(os.getenv('WORKER2_IP', 'default'))
+hosts.append(os.getenv('WORKER3_IP', 'default'))
+
+# get Elasticsearch credentials
+credentials = []
+credentials.append(os.getenv('ES_ACCESS_KEY', 'default'))
+credentials.append(os.getenv('ES_SECRET_ACCESS_KEY', 'default'))
+
 # setup Spark context
 conf = SparkConf().setMaster("spark://ec2-3-92-97-223.compute-1.amazonaws.com:7077").setAppName("Uniprot-to-txt")
 sc = SparkContext(conf=conf)
@@ -63,16 +76,10 @@ with open('/home/ubuntu/spark_uniprot_result.txt', 'w') as outfile:
         outfile.write(str(return_dic(i)) + '\n')
 
 # load data in Elasticsearch uniprot index
-url = 'http://vpc-budgies-3cg22sou4yelnjfivoz6qbic24.us-east-1.es.amazonaws.com/uniprot/_doc/'
-headers = {'Content-Type': 'application/json'}
- 
+es = Elasticsearch(hosts, http_auth=credentials, port=9200, sniff_on_start=True)
+
 for res in result:
     dic = return_dic(res)
-    identifier = dic['accession']
-    r = requests.put(url + identifier, headers=headers, data=json.dumps(dic))
-    if not r.ok:
-        with open('errors_uniprot_es.txt', 'a') as log:
-            log.write(r.text + '\n')
+    result = es.index(index='uniprot', doc_type='_doc', body=dic, id=dic['accession'])
 
-# terminate the Spark job
 sys.exit()
