@@ -3,35 +3,12 @@
 # to be processed further for storage into Elasticsearch
 
 import os
-import sys
-import getopt
 from pyspark import SparkConf, SparkContext
 import sys
 import subprocess
 import re
-import itertools
 import json
-import requests
-import time
 from elasticsearch import Elasticsearch
-
-# get list of folders
-def print_help():
-    """Print help."""
-
-    help_text = \
-"""Get experiment descriptions and gene identification numbers from\
- ArrayExpress accessions and load data into Elasticsearch.
-
-    Please provide a configuration file containing the full path to the file\
-containing accession names and the name of the index. See below for the formatting.
-
-    accession_file=<accession file path>
-    index=<index name>
-"""
-
-    print(help_text)
-    sys.exit()
 
 def get_config():
     """Return path for the file containing accessions and Elasticsearch index."""

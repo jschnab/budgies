@@ -5,8 +5,6 @@ import sys
 import os
 import re
 import itertools
-import json
-import requests
 from elasticsearch import Elasticsearch
 
 #=== Configure Elasticsearch connection ===#
