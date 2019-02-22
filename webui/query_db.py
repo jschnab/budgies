@@ -65,27 +65,20 @@ keywords passed as command line arguments."""
 
     return query
 
-def arrayexpress_query(endpoint, index, headers, data):
-    """Search Elasticsearch ArrayExpress index for experiment description \
-based on endpoint, headers and query passed as data. Return number of hits \
-and a list of dictionaries corresponding to search hits."""
+def arrayexpress_query(es, index, data):
+    """Search Elasticsearch ArrayExpress index for experiment description.
+Return number of hits and a list of dictionaries corresponding to search hits."""
 
-    # build URI for query
-    uri = '{0}{1}/_search'.format(endpoint, index)
+    results = es.search(es, index=index, body=json.dumps(data))
 
-    r = requests.get(uri, headers=headers, data=data)
+    hits = results['hits']
 
-    if r.ok:
-        hits = json.loads(r.text)['hits']
+    return hits['total'], hits['hits']
 
-        return hits['total'], hits['hits']
-
-def uniprot_query(endpoint, index, headers, gene_id):
+def uniprot_query(es, index, gene_id):
     """Search Elasticsearch Uniprot index for a gene ID returned by the \
 ArrayExpress search. Return number of hits and list of dictionaries \
 corresponding to search hits."""
-
-    uri = '{0}{1}/_search'.format(endpoint, index)
 
     if 'ENSG' in gene_id:
         data = json.dumps({"size":1, "sort": ["_score"], "query": {"match": {"ensembl": gene_id}}, "_source": "pdb"})
@@ -93,25 +86,20 @@ corresponding to search hits."""
     else:
         data = json.dumps({"size":1, "sort": ["_score"], "query": {"match": {"refseq": gene_id}}, "_source": "pdb"})
 
-    r = requests.get(uri, headers=headers, data=data)
+    results = es.search(es, index=index, body=data)
 
-    if r.ok:
-        hits = json.loads(r.text)['hits']
+    hits = results['hits']
 
-        return hits['total'], hits['hits']
+    return hits['total'], hits['hits']
     
-def molecules_query(endpoint, index, headers, pdbid):
+def molecules_query(es, index, pdbid):
     """Search Elasticsearch "molecules" index for a PDB ID returned by the \
 Uniprot search. Return number of hits and list of dictionaries \
 corresponding to search hits."""
 
-    uri = '{0}{1}/_doc/{2}'.format(endpoint, index, pdbid)
+    results = es.get(index=index, doc_type='_doc', id=pdbid)
 
-    r = requests.get(uri, headers=headers)
-
-    if r.ok:
-
-        return json.loads(r.text)
+    return results
 
 def save_csv(home, results):
     """Save results of Elasticsearch query as a tab-separated values file."""
@@ -172,7 +160,7 @@ def send_query(raw_query, project, email):
     """Query Elasticsearch with user input, save the results in AWS S3
 and send an email to the user to allow downloading of results."""
    
-    home, endpoint, headers = get_config()
+    home, hosts, credentials = get_config()
 
     # get set of genes present in "uniprot" index of Elasticsearch
     # and which correspond to PDB IDs with molecule(s) bound to them
@@ -191,8 +179,10 @@ and send an email to the user to allow downloading of results."""
     query = build_query(raw_query)
     print('Query : {0} (project : {1})'.format(raw_query, project))
 
+    es = Elasticsearch(hosts, http_auth=credentials, port=9200, sniff_on_start=True)
+
     # query ArrayExpress index
-    n_hits,  arrayexpress_hits = arrayexpress_query(endpoint, 'arrayexpress', headers, query)
+    n_hits,  arrayexpress_hits = arrayexpress_query(es, 'arrayexpress', query)
     print('Number of hits : {0} (project : {1})'.format(len(arrayexpress_hits), project))
 
     if arrayexpress_hits is not None:
@@ -214,7 +204,7 @@ and send an email to the user to allow downloading of results."""
                 if g in gene_set:
 
                     # query Uniprot index
-                    n_hits_uniprot, uniprot_hits = uniprot_query(endpoint, 'uniprot', headers, g)
+                    n_hits_uniprot, uniprot_hits = uniprot_query(es, 'uniprot', g)
 
                     if uniprot_hits is not None:
                         for uprot_hit in uniprot_hits:
