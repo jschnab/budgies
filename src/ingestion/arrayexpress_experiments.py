@@ -153,7 +153,6 @@ Please create your own and place it in "budgies/src/".')
 
         # append date to file name
         file_name = 'experiments-{0}.json'.format(search_url[-5:-1])
-        #        .format(datetime.today().strftime('%Y%m%d'))
 
         print('Saving data in "{0}"'.format(file_name))
         start = time.perf_counter() 

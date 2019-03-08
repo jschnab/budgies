@@ -7,19 +7,19 @@ import os
 with open('config.txt', 'r') as config:
     while True:
         line = config.readline()
-        if line == '':
+        if not line:
             break
         else:
             splitted = line.split('=')
             if splitted[0] == 'accession_file':
-                accessions = splitted[1].strip('\n')
+                accessions = splitted[1].strip()
 
 # make a list from the text file containing folder names
 folders = []
 with open(accessions, 'r') as infile:
     while True:
-        line = infile.readline().strip('\n')
-        if line == '':
+        line = infile.readline().strip()
+        if not line:
             break
         else:
             folders.append(line)
@@ -27,8 +27,8 @@ with open(accessions, 'r') as infile:
 # make a list from the text file containing folder sizes
 with open('sizes.txt', 'r') as infile:
     while True:
-        line = infile.readline().strip('\n')
-        if line == '':
+        line = infile.readline().strip()
+        if not line:
             break
         else:
             sizes = [float(s) for s in line.split()]

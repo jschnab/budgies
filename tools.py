@@ -16,7 +16,7 @@ def get_config():
             else:
                 splitted = line.split('=')
                 if splitted[0] == 'elasticsearch_endpoint':
-                    endpoint = splitted[1].strip('\n')
+                    endpoint = splitted[1].strip()
                 elif splitted[0] == 'headers':
                     headers = json.loads(splitted[1].strip('\n').replace("'", '"'))
 
@@ -25,8 +25,9 @@ def get_config():
 def get_pdbids():
     """Return list of PDB IDs corresponding to all molecules \
 from Elasticsearch."""
+    query = {"size":3506, "query": {"match_all": {}}}
 
-    data = json.dumps({"size":3506, "query": {"match_all": {}}})
+    data = json.dumps(query)
 
     r = requests.get(endpoint + 'molecules/_search?pretty', headers=headers, data=data)
 

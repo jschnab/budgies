@@ -16,16 +16,14 @@ def get_config():
     home = os.getenv('HOME', 'default')
 
     # get Elasticsearch cluster IP addresses
-    hosts = []
-    hosts.append(os.getenv('MASTER_IP', 'default'))
-    hosts.append(os.getenv('WORKER1_IP', 'default'))
-    hosts.append(os.getenv('WORKER3_IP', 'default'))
-    hosts.append(os.getenv('WORKER2_IP', 'default'))
+    hosts = [os.getenv('MASTER_IP', 'default'),
+            os.getenv('WORKER1_IP', 'default'),
+            os.getenv('WORKER3_IP', 'default'),
+            os.getenv('WORKER2_IP', 'default')]
 
     # get Elasticsearch cluster credentials
-    credentials = []
-    credentials.append(os.getenv('ES_ACCESS_KEY', 'default'))
-    credentials.append(os.getenv('ES_SECRET_ACCESS_KEY', 'default'))
+    credentials = [os.getenv('ES_ACCESS_KEY', 'default'),
+            os.getenv('ES_SECRET_ACCESS_KEY', 'default')]
 
     return home, hosts, credentials
 
@@ -37,8 +35,8 @@ which correspond to PDB IDs with molecules attached to them."""
 
     with open(home + '/budgies/src/genes_molecules.txt', 'r') as infile:
         while True:
-            line = infile.readline().strip('\n')
-            if line.strip('\n') == '':
+            line = infile.readline().strip()
+            if not line:
                 break
             else:
                 gene_set.add(line)
@@ -52,13 +50,13 @@ keywords passed as command line arguments."""
     operators = ['AND', 'OR', 'NOT']
 
     if any(op in raw_query for op in operators):
-        query = '{"query": {"query_string": {"default_field": "description",\
-                                           "query": "' + raw_query + '"}},\
+        query = '{"query": {"query_string": {"default_field": "description",
+                                           "query": "' + raw_query + '"}},
                   "_source": ["description", "gene_ids"]}'
 
     else:
-        query = '{"size": 10, "sort": ["_score"], \
-                  "query": {"match": {"description": "' + raw_query + '"}}, \
+        query = '{"size": 10, "sort": ["_score"], 
+                  "query": {"match": {"description": "' + raw_query + '"}}, 
                   "_source": ["description", "gene_ids"]}'
 
     return query
@@ -69,30 +67,28 @@ Return number of hits and a list of dictionaries corresponding to search hits.""
 
     results = es.search(es, index=index, body=json.dumps(data))
 
-    hits = results['hits']
-
-    return hits['total'], hits['hits']
+    return results['hits']['total'], results['hits']['hits']
 
 def uniprot_query(es, index, gene_id):
-    """Search Elasticsearch Uniprot index for a gene ID returned by the \
-ArrayExpress search. Return number of hits and list of dictionaries \
+    """Search Elasticsearch Uniprot index for a gene ID returned by the 
+ArrayExpress search. Return number of hits and list of dictionaries 
 corresponding to search hits."""
 
     if 'ENSG' in gene_id:
-        data = json.dumps({"size":1, "sort": ["_score"], "query": {"match": {"ensembl": gene_id}}, "_source": "pdb"})
+        query = {"size":1, "sort": ["_score"], "query": {"match": {"ensembl": gene_id}}, "_source": "pdb"}
+        data = json.dumps(query)
 
     else:
-        data = json.dumps({"size":1, "sort": ["_score"], "query": {"match": {"refseq": gene_id}}, "_source": "pdb"})
+        query = {"size":1, "sort": ["_score"], "query": {"match": {"refseq": gene_id}}, "_source": "pdb"}
+        data = json.dumps(query)
 
     results = es.search(es, index=index, body=data)
 
-    hits = results['hits']
-
-    return hits['total'], hits['hits']
+    return results['hits']['total'], results['hits']['hits']
     
 def molecules_query(es, index, pdbid):
-    """Search Elasticsearch "molecules" index for a PDB ID returned by the \
-Uniprot search. Return number of hits and list of dictionaries \
+    """Search Elasticsearch "molecules" index for a PDB ID returned by the 
+Uniprot search. Return number of hits and list of dictionaries 
 corresponding to search hits."""
 
     results = es.get(index=index, doc_type='_doc', id=pdbid)
@@ -177,7 +173,7 @@ and send an email to the user to allow downloading of results."""
     query = build_query(raw_query)
     print('Query : {0} (project : {1})'.format(raw_query, project))
 
-    es = Elasticsearch(hosts, http_auth=credentials, port=9200, sniff_on_start=True)
+    es = Elasticsearch(hosts, http_auth=credentials, sniff_on_start=True)
 
     # query ArrayExpress index
     n_hits,  arrayexpress_hits = arrayexpress_query(es, 'arrayexpress', query)
@@ -189,7 +185,7 @@ and send an email to the user to allow downloading of results."""
             # save experiment's description
             print('Processing {0} (project : {1})'.format(hit['_id'], project))
             print('Number of genes : {0} (project : {1})'.format(len(set(hit['_source']['gene_ids'])), project))
-            if hit['_source']['gene_ids'] != []:
+            if hit['_source']['gene_ids']:
                 with open(home + '/budgies/output/experiment_description.txt', 'a') as outfile:
                     outfile.write(hit['_id'] + ' : ' + str(hit['_source']['description']) + '\n')
 

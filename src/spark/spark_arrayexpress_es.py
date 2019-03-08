@@ -59,8 +59,7 @@ def get_files(folder):
 
     files_to_process = []
     for f in files:
-        search = re.search(r1, f) and re.search(r2, f) and re.search(r3, f)
-        if search:
+        if re.search(r1, f) and re.search(r2, f) and re.search(r3, f):
             files_to_process.append(search.group(0))
 
     return files_to_process
@@ -99,10 +98,7 @@ def return_dic(accession, description, gene_ids):
     """Return a dictionary with keys accession, description and gene ids\
 for saving as line in a text file. This makes storing into Elasticsearch\
 easier when reading the text file."""
-    dic = {}
-    dic["accession"] = accession
-    dic["description"] = description
-    dic["gene_ids"] = gene_ids
+    dic = {"accession":accession, "description":description, "gene_ids":gene_ids}
 
     return dic
 
@@ -123,14 +119,15 @@ def store_es(es, index, dic):
 
 if __name__ == '__main__':
 
+    spark_hostname = os.getenv('MYSPARK_HOSTNAME')
     # setting Spark configuration and context
-    conf = SparkConf().setMaster("spark://ec2-3-92-97-223.compute-1.amazonaws.com:7077").setAppName("ArrayExpress to Elasticsearch")
+    conf = SparkConf().setMaster(spark_hostname).setAppName("ArrayExpress to Elasticsearch")
     sc = SparkContext(conf=conf)
 
     # get file with accessions names and index of Elasticsearch
     accessions_file, index, hosts, credentials = get_config()
 
-    es = Elasticsearch(hosts, http_auth=credentials, port=9200, sniff_on_start=True)
+    es = Elasticsearch(hosts, http_auth=credentials, sniff_on_start=True)
 
     # convert accessions_file content into list
     accessions = []

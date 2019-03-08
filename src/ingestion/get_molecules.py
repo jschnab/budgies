@@ -14,8 +14,8 @@ with open('/home/ubuntu/spark_uniprot_result.txt', 'r') as infile:
     
     # loop through lines until end of file
     while True:
-        line = infile.readline().strip('\n')
-        if line == '':
+        line = infile.readline().strip()
+        if not line:
             break
 
         else:

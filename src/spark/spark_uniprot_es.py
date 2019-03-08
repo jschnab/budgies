@@ -9,19 +9,19 @@ from elasticsearch import Elasticsearch
 
 #=== Configure Elasticsearch connection ===#
 # get Elasticsearch cluter IP addresses
-hosts = []
-hosts.append(os.getenv('MASTER_IP', 'default'))
-hosts.append(os.getenv('WORKER1_IP', 'default'))
-hosts.append(os.getenv('WORKER2_IP', 'default'))
-hosts.append(os.getenv('WORKER3_IP', 'default'))
+hosts = [os.getenv('MASTER_IP', 'default'),
+        os.getenv('WORKER1_IP', 'default'),
+        os.getenv('WORKER2_IP', 'default'),
+        os.getenv('WORKER3_IP', 'default')
+        ]
 
 # get Elasticsearch credentials
-credentials = []
-credentials.append(os.getenv('ES_ACCESS_KEY', 'default'))
-credentials.append(os.getenv('ES_SECRET_ACCESS_KEY', 'default'))
+credentials = [os.getenv('ES_ACCESS_KEY', 'default'),
+        os.getenv('ES_SECRET_ACCESS_KEY', 'default')]
 
 # setup Spark context
-conf = SparkConf().setMaster("spark://ec2-3-92-97-223.compute-1.amazonaws.com:7077").setAppName("Uniprot-to-txt")
+spark_hostname = os.getenv('MYSPARK_HOSTNAME', 'default')
+conf = SparkConf().setMaster(spark_hostname).setAppName("Uniprot-to-txt")
 sc = SparkContext(conf=conf)
 
 # read files
@@ -34,15 +34,11 @@ re_ref = re.compile(r'[NX]M_[0-9]+')
 
 # make a dictionary out of Spark output for insertion into Elasticsearch
 def return_dic(results):
-    """Return a dictionary with keys accession, description and gene ids\
-for saving as line in a text file. This makes storing into Elasticsearch\
+    """Return a dictionary with keys accession, description and gene ids
+for saving as line in a text file. This makes storing into Elasticsearch
 easier when reading the text file."""
-    dic = {}
-    dic["accession"] = results[0]
-    dic["pdb"] = results[1]
-    dic["ensembl"] = results[2]
-    dic["refseq"] = results[3]
-    
+    dic = {"accession":results[0], "pdb":results[1], "ensembl":results[2], "refseq":results[3]}
+
     return dic
 
 # parse the Uniprot text file

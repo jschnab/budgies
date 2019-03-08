@@ -10,7 +10,7 @@ def get_config():
     with open('config.txt', 'r') as config:
         while True:
             line = config.readline()
-            if line =='':
+            if not line:
                 break
 
             else:
@@ -28,7 +28,7 @@ def get_pdbids_from_text():
     with open('molecules_pdbset.txt', 'r') as infile:
         while True:
             line = infile.readline().strip('\n')
-            if line == '':
+            if not line:
                 break
             else:
                 pdb_ids.append(line)
@@ -38,8 +38,8 @@ def get_pdbids_from_text():
 def get_geneids(pdbid):
     """Return list of gene ids corresponding to Uniprot accessions \
 which have PDB structures with bound molecules."""
-
-    data = json.dumps({"size":1, "query": {"match": {"pdb": pdbid}}, "_source": ['refseq', 'ensembl']})
+    query = {"size":1, "query": {"match": {"pdb": pdbid}}, "_source": ['refseq', 'ensembl']}
+    data = json.dumps(query)
 
     r = requests.get(endpoint + 'uniprot/_search?pretty', headers=headers, data=data)
 

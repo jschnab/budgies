@@ -68,6 +68,7 @@ def log_error(err_msg, work_dir):
     """Log error in a text file."""
     
     # if the script is in an accession-specific directory :
+    # i.e. not in the working directory
     # get current directory, save log in working directory
     if not os.getcwd() == work_dir:
         curr_dir = os.getcwd()
@@ -109,8 +110,8 @@ def new_accessions():
     last_files = sorted([f for f in os.listdir(os.getcwd()) if f.endswith('.json')])[-2:]
 
     # check if there is any file to be processed
-    if last_files == []:
-        print('There is not experiments.json files to be processed')
+    if not last_files:
+        print('There is no experiments.json files to be processed')
         sys.exit()
 
     # return all accessions if there is only one file
@@ -164,7 +165,7 @@ def download_file(file_url, headers, timeout):
     """Download a file containing experimental results."""
 
     # for a text file
-    if file_url[-3:] == 'txt':
+    if file_url.split('.')[-1] == 'txt':
         try:
             response = requests.get(file_url, headers=headers, timeout=timeout)
             if response.ok:
